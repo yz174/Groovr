@@ -1,0 +1,40 @@
+{
+  "name": "groovr",
+  "version": "1.0.0",
+  "main": "expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild --clean"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@gorhom/bottom-sheet": "^5.2.8",
+    "@react-navigation/bottom-tabs": "^7.2.2",
+    "@react-navigation/native": "^7.2.2",
+    "@react-navigation/native-stack": "^7.14.10",
+    "expo": "~55.0.9",
+    "expo-av": "~16.0.8",
+    "expo-build-properties": "~55.0.0",
+    "expo-file-system": "~55.0.0",
+    "expo-font": "~55.0.0",
+    "expo-splash-screen": "~55.0.0",
+    "expo-status-bar": "~55.0.4",
+    "react": "19.2.0",
+    "react-native": "0.83.4",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-mmkv": "^4.3.0",
+    "react-native-reanimated": "4.2.1",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "^19.1.1",
+    "babel-preset-expo": "~55.0.13",
+    "typescript": "^5.3.0"
+  },
+  "private": true
+}

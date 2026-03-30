@@ -1,0 +1,63 @@
+# Node dependencies
+node_modules/
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Metro / React Native cache
+.expo/
+.expo-shared/
+.expo-export/
+.expo-export-dev-readable/
+.expo-export-js/
+.expo-export-readable/
+.metro-health-check*
+
+# Build artifacts
+build/
+dist/
+*.tgz
+.claude
+
+# Android
+android/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+*.apk
+*.aab
+
+# iOS (safe even if iOS folder is added later)
+ios/build/
+DerivedData/
+*.xcworkspace
+!*.xcodeproj/project.pbxproj
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Coverage and test output
+coverage/
+*.lcov
+jest-results/
+
+# TypeScript
+*.tsbuildinfo
+
+# Editor and OS files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
