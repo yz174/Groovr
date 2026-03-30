@@ -24,6 +24,9 @@ interface PlayerState {
   downloadedIds: Set<string>;
   downloadProgress: Record<string, number>;
 
+  // UI overlays
+  isBlockingOverlayVisible: boolean;
+
   // Internal
   sound: Audio.Sound | null;
 }
@@ -52,6 +55,7 @@ interface PlayerActions {
   setDownloadProgress: (id: string, progress: number) => void;
   markDownloaded: (id: string) => void;
   removeDownload: (id: string) => void;
+  setBlockingOverlayVisible: (visible: boolean) => void;
 
   // Internal
   _onPlaybackStatusUpdate: (status: AVPlaybackStatus) => void;
@@ -85,6 +89,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   shuffledIndices: [],
   downloadedIds: new Set(),
   downloadProgress: {},
+  isBlockingOverlayVisible: false,
   sound: null,
 
   currentSong: () => {
@@ -286,6 +291,10 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       next.delete(id);
       return { downloadedIds: next };
     });
+  },
+
+  setBlockingOverlayVisible: (visible) => {
+    set({ isBlockingOverlayVisible: visible });
   },
 
   cleanup: async () => {

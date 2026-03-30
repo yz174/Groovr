@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Song, getBestDownloadUrl, getBestImage, getSongArtistNames } from '../api/saavn';
 import { getJSON, setJSON, STORAGE_KEYS } from '../utils/storage';
 import { usePlayerStore } from './playerStore';
