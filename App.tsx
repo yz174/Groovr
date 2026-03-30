@@ -15,25 +15,22 @@ import { useSettingsStore } from './src/store/settingsStore';
 import { useTheme } from './src/hooks/useTheme';
 
 const FONT_FAMILY = {
-  regular: 'GoogleSans-Regular',
-  medium: 'GoogleSans-Medium',
-  bold: 'GoogleSans-Bold',
-  italic: 'GoogleSans-Italic',
+  regular: 'Flamante-Round-Book-FFP',
+  medium: 'Flamante-Roma-Medium',
 } as const;
 
-function resolveGoogleSansFamily(style: any): string {
+function resolveFlamanteFamily(style: any): string {
   const weight = typeof style?.fontWeight === 'string' ? style.fontWeight : '';
-  const isItalic = style?.fontStyle === 'italic';
 
-  if (isItalic) return FONT_FAMILY.italic;
-  if (weight === '500') return FONT_FAMILY.medium;
-  if (weight === 'bold' || ['600', '700', '800', '900'].includes(weight)) return FONT_FAMILY.bold;
+  if (weight === '500' || weight === 'bold' || ['600', '700', '800', '900'].includes(weight)) {
+    return FONT_FAMILY.medium;
+  }
   return FONT_FAMILY.regular;
 }
 
 function patchGlobalTextFont() {
   const TextAny = Text as any;
-  if (TextAny.__googleSansPatched) return;
+  if (TextAny.__flamantePatched) return;
 
   if (typeof TextAny.render === 'function') {
     const originalRender = TextAny.render;
@@ -43,7 +40,7 @@ function patchGlobalTextFont() {
 
       if (flattened.fontFamily) return element;
 
-      const resolvedFamily = resolveGoogleSansFamily(flattened);
+      const resolvedFamily = resolveFlamanteFamily(flattened);
       return React.cloneElement(element, {
         style: [
           element.props.style,
@@ -64,7 +61,7 @@ function patchGlobalTextFont() {
   TextInputAny.defaultProps = TextInputAny.defaultProps || {};
   TextInputAny.defaultProps.style = [{ fontFamily: FONT_FAMILY.regular }, TextInputAny.defaultProps.style];
 
-  TextAny.__googleSansPatched = true;
+  TextAny.__flamantePatched = true;
 }
 
 patchGlobalTextFont();
@@ -81,10 +78,12 @@ function AppContent() {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    [FONT_FAMILY.regular]: require('./assets/fonts/GoogleSans-Regular.ttf'),
-    [FONT_FAMILY.medium]: require('./assets/fonts/GoogleSans-Medium.ttf'),
-    [FONT_FAMILY.bold]: require('./assets/fonts/GoogleSans-Bold.ttf'),
-    [FONT_FAMILY.italic]: require('./assets/fonts/GoogleSans-Italic.ttf'),
+    [FONT_FAMILY.regular]: require('./assets/fonts/Flamante-Round-Book-FFP.ttf'),
+    [FONT_FAMILY.medium]: require('./assets/fonts/Flamante-Roma-Medium.ttf'),
+    'Flamante Round Book': require('./assets/fonts/Flamante-Round-Book-FFP.ttf'),
+    FlamanteRoundBook: require('./assets/fonts/Flamante-Round-Book-FFP.ttf'),
+    'Flamante Roma Medium': require('./assets/fonts/Flamante-Roma-Medium.ttf'),
+    FlamanteRomaMedium: require('./assets/fonts/Flamante-Roma-Medium.ttf'),
   });
 
   const hydrateLibrary = useLibraryStore(s => s.hydrate);

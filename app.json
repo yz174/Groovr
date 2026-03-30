@@ -39,10 +39,8 @@
         "expo-font",
         {
           "fonts": [
-            "./assets/fonts/GoogleSans-Regular.ttf",
-            "./assets/fonts/GoogleSans-Medium.ttf",
-            "./assets/fonts/GoogleSans-Bold.ttf",
-            "./assets/fonts/GoogleSans-Italic.ttf"
+            "./assets/fonts/Flamante-Round-Book-FFP.ttf",
+            "./assets/fonts/Flamante-Roma-Medium.ttf"
           ]
         }
       ],
