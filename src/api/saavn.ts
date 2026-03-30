@@ -182,6 +182,36 @@ export function getSongArtistNames(song: Song): string {
   return song.primaryArtists ?? 'Unknown Artist';
 }
 
+export function getAlbumArtistNames(album: Partial<Album> | null | undefined): string {
+  if (!album) return '';
+
+  if (typeof album.primaryArtists === 'string' && album.primaryArtists.trim().length > 0) {
+    return album.primaryArtists;
+  }
+
+  const artistsValue = (album as any).artists;
+
+  if (Array.isArray(artistsValue)) {
+    const names = artistsValue
+      .map((a: any) => a?.name)
+      .filter((name: unknown): name is string => typeof name === 'string' && name.trim().length > 0);
+
+    if (names.length > 0) return names.join(', ');
+  }
+
+  if (artistsValue && typeof artistsValue === 'object') {
+    const nested = [artistsValue.primary, artistsValue.featured, artistsValue.all]
+      .filter(Array.isArray)
+      .flat()
+      .map((a: any) => a?.name)
+      .filter((name: unknown): name is string => typeof name === 'string' && name.trim().length > 0);
+
+    if (nested.length > 0) return nested.join(', ');
+  }
+
+  return '';
+}
+
 export function formatDuration(seconds: number | string): string {
   const s = typeof seconds === 'string' ? parseInt(seconds, 10) : seconds;
   if (isNaN(s)) return '0:00';
