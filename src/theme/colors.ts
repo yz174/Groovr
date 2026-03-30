@@ -22,7 +22,7 @@ export const Colors = {
 
   // Dark theme
   dark: {
-    background: '#1C1C1E',
+    background: '#181A20',
     surface: '#2C2C2E',
     surfaceElevated: '#3A3A3C',
     text: '#FFFFFF',

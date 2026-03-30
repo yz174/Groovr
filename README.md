@@ -32,7 +32,7 @@ A modern music streaming and discovery app built with React Native and Expo. Bro
 - **Download Quality** — Independent quality setting for offline downloads
 - **Cellular Controls** — Toggle streaming and downloading over mobile data independently
 - **Download Management** — View total storage used by downloads; clear all downloads in one tap
-- **Custom Typography** — Google Sans font family applied throughout the app
+- **Custom Typography** — Flamante Round Book + Flamante Roma Medium applied throughout the app
 
 ## Tech Stack
 

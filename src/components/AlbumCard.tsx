@@ -97,7 +97,8 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
     lineHeight: 18,
   },
   meta: {

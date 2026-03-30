@@ -105,7 +105,8 @@ function TabLayout() {
             paddingBottom: 4,
             height: 60,
           },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+          tabBarLabelStyle: { fontSize: 11, fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal' },
           tabBarIcon: ({ color, size, focused }) => {
             const icons: Record<string, [string, string]> = {
               HomeTab: ['home', 'home-outline'],

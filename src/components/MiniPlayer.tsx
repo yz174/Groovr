@@ -121,7 +121,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
   },
   artist: {
     fontSize: 12,

@@ -97,7 +97,8 @@ const styles = StyleSheet.create({
   index: {
     width: 28,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
     textAlign: 'center',
     marginRight: 4,
   },
@@ -118,7 +119,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
   },
   subtitle: {
     fontSize: 12,

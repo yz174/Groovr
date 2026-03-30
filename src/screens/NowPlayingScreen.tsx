@@ -204,7 +204,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   topBarCenter: { flex: 1, alignItems: 'center' },
-  topBarLabel: { fontSize: 14, fontWeight: '500' },
+  topBarLabel: { fontSize: 14, fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal' },
   artworkContainer: {
     alignItems: 'center',
     marginTop: 16,
@@ -231,7 +232,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   infoText: { flex: 1, marginRight: 16 },
-  songTitle: { fontSize: 22, fontWeight: '700' },
+  songTitle: { fontSize: 22, fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal' },
   artistName: { fontSize: 16, marginTop: 4 },
   progressContainer: { paddingHorizontal: 24 },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 4 },
@@ -265,5 +267,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  repeatOneText: { fontSize: 8, color: '#fff', fontWeight: '700' },
+  repeatOneText: { fontSize: 8, color: '#fff', fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal' },
 });

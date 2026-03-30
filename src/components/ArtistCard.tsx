@@ -44,7 +44,8 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 4,

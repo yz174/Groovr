@@ -355,7 +355,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
   },
   headerSub: {
     fontSize: 12,
@@ -374,7 +375,8 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: 'Flamante-Round-Book-FFP',
+    fontWeight: 'normal',
   },
   playlistOverlay: {
     flex: 1,
@@ -392,7 +394,8 @@ const styles = StyleSheet.create({
   },
   playlistTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
@@ -411,7 +414,8 @@ const styles = StyleSheet.create({
   },
   playlistName: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
   },
   playlistMeta: {
     fontSize: 12,
@@ -427,7 +431,8 @@ const styles = StyleSheet.create({
   playlistConfirmText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
   },
   playlistCancel: {
     margin: 12,
@@ -438,6 +443,7 @@ const styles = StyleSheet.create({
   },
   playlistCancelText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
   },
 });
