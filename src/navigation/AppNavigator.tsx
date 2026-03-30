@@ -4,7 +4,6 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RootStackParamList, TabParamList, HomeStackParamList, SearchStackParamList, FavoritesStackParamList, PlaylistsStackParamList, SettingsStackParamList } from './types';
 import { useTheme } from '../hooks/useTheme';
@@ -90,6 +89,7 @@ function SettingsStackNav() {
 function TabLayout() {
   const { colors, isDark } = useTheme();
   const currentSong = usePlayerStore(s => s.currentSong());
+  const tabBackgroundColor = isDark ? 'rgba(28, 28, 30, 0.97)' : 'rgba(255, 255, 255, 0.95)';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -99,29 +99,55 @@ function TabLayout() {
           tabBarActiveTintColor: Colors.primary,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarStyle: {
-            backgroundColor: colors.navBar,
-            borderTopColor: colors.separator,
-            borderTopWidth: StyleSheet.hairlineWidth,
-            paddingBottom: 4,
-            height: 60,
+            backgroundColor: tabBackgroundColor,
+            borderTopColor: 'transparent',
+            borderTopWidth: 0,
+            borderTopLeftRadius: 26,
+            borderTopRightRadius: 26,
+            overflow: 'hidden',
+            position: 'absolute',
+            paddingTop: 8,
+            paddingBottom: 12,
+            height: 78,
+            elevation: 12,
+            shadowColor: '#000',
+            shadowOpacity: isDark ? 0.28 : 0.1,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: -4 },
+          },
+          tabBarItemStyle: {
+            width: '25%',
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          tabBarIconStyle: {
+            width: 28,
+            height: 28,
+            marginBottom: 2,
+            alignItems: 'center',
+            justifyContent: 'center',
           },
           tabBarLabelStyle: { fontSize: 11, fontFamily: 'Flamante-Roma-Medium',
-    fontWeight: 'normal' },
+    fontWeight: 'normal', marginTop: 0, textAlign: 'center' },
           tabBarIcon: ({ color, size, focused }) => {
             const icons: Record<string, [string, string]> = {
               HomeTab: ['home', 'home-outline'],
-              SearchTab: ['search', 'search-outline'],
               FavoritesTab: ['heart', 'heart-outline'],
               PlaylistsTab: ['list', 'list-outline'],
               SettingsTab: ['settings', 'settings-outline'],
             };
+            const iconSizes: Record<string, number> = {
+              HomeTab: 28,
+              FavoritesTab: 26,
+              PlaylistsTab: 25,
+              SettingsTab: 24,
+            };
             const [active, inactive] = icons[route.name] ?? ['ellipse', 'ellipse-outline'];
-            return <Ionicons name={(focused ? active : inactive) as any} size={size} color={color} />;
+            return <Ionicons name={(focused ? active : inactive) as any} size={iconSizes[route.name] ?? size} color={color} />;
           },
         })}
       >
         <Tab.Screen name="HomeTab" component={HomeStackNav} options={{ title: 'Home' }} />
-        <Tab.Screen name="SearchTab" component={SearchStackNav} options={{ title: 'Search' }} />
         <Tab.Screen name="FavoritesTab" component={FavoritesStackNav} options={{ title: 'Favorites' }} />
         <Tab.Screen name="PlaylistsTab" component={PlaylistsStackNav} options={{ title: 'Playlists' }} />
         <Tab.Screen name="SettingsTab" component={SettingsStackNav} options={{ title: 'Settings' }} />
@@ -153,6 +179,7 @@ export default function AppNavigator() {
     >
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Main" component={TabLayout} />
+        <RootStack.Screen name="SearchFlow" component={SearchStackNav} />
         <RootStack.Screen
           name="NowPlaying"
           component={NowPlayingScreen}

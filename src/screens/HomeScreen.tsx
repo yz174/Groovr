@@ -119,6 +119,10 @@ export default function HomeScreen() {
     navigation.navigate('AlbumDetails', { albumId: album.id, albumName: album.name });
   }, [navigation]);
 
+  const openSearch = useCallback(() => {
+    (navigation as any).navigate('SearchFlow', { screen: 'Search' });
+  }, [navigation]);
+
   const sortedSongs = [...songs].sort((a, b) => {
     return sortMode === 'Ascending' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
   });
@@ -229,12 +233,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
+      <View style={styles.header}>
         <View style={styles.logoRow}>
           <Ionicons name="musical-notes" size={28} color={Colors.primary} />
           <Text style={[styles.logoText, { color: colors.text }]}>Groovr</Text>
         </View>
-        <TouchableOpacity hitSlop={8}>
+        <TouchableOpacity hitSlop={8} onPress={openSearch}>
           <Ionicons name="search-outline" size={24} color={colors.icon} />
         </TouchableOpacity>
       </View>
@@ -402,7 +406,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   logoText: { fontSize: 22, fontFamily: 'Flamante-Roma-Medium',

@@ -71,10 +71,7 @@ export default function AlbumDetailsScreen() {
   })();
 
   const openSearch = () => {
-    const parent = navigation.getParent() as any;
-    if (parent) {
-      parent.navigate('SearchTab', { screen: 'Search' });
-    }
+    (navigation as any).navigate('SearchFlow', { screen: 'Search' });
   };
 
   return (
