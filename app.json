@@ -4,6 +4,7 @@
     "slug": "groovr",
     "version": "1.0.0",
     "orientation": "portrait",
+    "newArchEnabled": false,
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -46,19 +47,17 @@
         }
       ],
       [
-        "expo-av",
-        {
-          "microphonePermission": "Allow Groovr to access microphone."
-        }
-      ],
-      [
         "expo-build-properties",
         {
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0",
-            "ndkVersion": "27.1.12297006"
+            "ndkVersion": "27.1.12297006",
+            "newArchEnabled": false
+          },
+          "ios": {
+            "newArchEnabled": false
           }
         }
       ]
