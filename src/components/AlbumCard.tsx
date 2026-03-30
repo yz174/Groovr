@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Album, getBestImage } from '../api/saavn';
+import { Album, getAlbumArtistNames, getBestImage } from '../api/saavn';
 import { useTheme } from '../hooks/useTheme';
 
 interface AlbumCardProps {
@@ -15,7 +15,7 @@ interface AlbumCardProps {
 const AlbumCard = memo(({ album, onPress, onOptionsPress, size = 160, horizontal = false }: AlbumCardProps) => {
   const { colors } = useTheme();
   const imageUrl = getBestImage(album.image, '500x500');
-  const artistName = album.primaryArtists ?? album.artists?.map(a => a.name).join(', ') ?? '';
+  const artistName = getAlbumArtistNames(album);
 
   if (horizontal) {
     return (

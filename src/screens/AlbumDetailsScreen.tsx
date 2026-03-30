@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
-import { getAlbum, Song, getBestImage, getSongArtistNames } from '../api/saavn';
+import { getAlbum, Song, getBestImage, getAlbumArtistNames } from '../api/saavn';
 import { usePlayerStore } from '../store/playerStore';
 import SongRow from '../components/SongRow';
 import SongOptionsSheet from '../components/SongOptionsSheet';
@@ -46,9 +46,9 @@ export default function AlbumDetailsScreen() {
     );
   }
 
-  const songs: Song[] = album?.songs ?? [];
+  const songs: Song[] = Array.isArray(album?.songs) ? album.songs : [];
   const imageUrl = getBestImage(album?.image ?? [], '500x500');
-  const artistName = album?.primaryArtists ?? album?.artists?.map((a: any) => a.name).join(', ') ?? '';
+  const artistName = getAlbumArtistNames(album);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
