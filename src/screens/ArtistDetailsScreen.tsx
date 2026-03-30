@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, Image, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, FlatList, Dimensions,
+  StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +20,13 @@ import { HomeStackParamList } from '../navigation/types';
 type RoutePropType = RouteProp<HomeStackParamList, 'ArtistDetails'>;
 type NavProp = NativeStackNavigationProp<HomeStackParamList>;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+function normalizeArtistRef(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed === 'undefined' || trimmed === 'null') return '';
+  return trimmed;
+}
 
 export default function ArtistDetailsScreen() {
   const route = useRoute<RoutePropType>();
@@ -41,18 +47,35 @@ export default function ArtistDetailsScreen() {
       setLoading(true);
       try {
         let artistData: Artist | null = null;
-        let resolvedArtistId = artistId;
+        let resolvedArtistId = normalizeArtistRef(artistId);
+        const resolvedArtistName = typeof artistName === 'string' ? artistName.trim() : '';
 
-        try {
-          artistData = await getArtist(artistId);
-          resolvedArtistId = artistData?.id ?? artistId;
-        } catch {
-          // Fallback: if a composite or stale ID fails, resolve a valid single artist by name.
-          const candidates = await searchArtists(artistName, 10);
+        if (resolvedArtistId) {
+          try {
+            artistData = await getArtist(resolvedArtistId);
+            resolvedArtistId = normalizeArtistRef(artistData?.id) || resolvedArtistId;
+          } catch {
+            // Fall through to name-based resolution below.
+          }
+        }
+
+        if (!artistData && resolvedArtistName) {
+          const candidates = await searchArtists(resolvedArtistName, 10);
           const fallback = candidates.find((a) => isSingleArtistCandidate(a)) ?? candidates[0];
-          if (!fallback?.id) throw new Error('No valid fallback artist found');
-          artistData = await getArtist(fallback.id);
-          resolvedArtistId = artistData?.id ?? fallback.id;
+          const fallbackId = normalizeArtistRef(fallback?.id);
+          if (fallbackId) {
+            try {
+              artistData = await getArtist(fallbackId);
+              resolvedArtistId = normalizeArtistRef(artistData?.id) || fallbackId;
+            } catch {
+              artistData = fallback as Artist;
+              resolvedArtistId = fallbackId;
+            }
+          }
+        }
+
+        if (!resolvedArtistId) {
+          throw new Error('No valid artist id could be resolved');
         }
 
         setArtist(artistData);
@@ -62,16 +85,19 @@ export default function ArtistDetailsScreen() {
           getArtistAlbums(resolvedArtistId),
         ]);
 
-        if (songsResult.status === 'fulfilled') {
-          setSongs((songsResult.value ?? []).slice(0, 20));
+        const fetchedSongs = songsResult.status === 'fulfilled' ? (songsResult.value ?? []) : [];
+        const fetchedAlbums = albumsResult.status === 'fulfilled' ? (albumsResult.value ?? []) : [];
+
+        if (fetchedSongs.length > 0) {
+          setSongs(fetchedSongs.slice(0, 20));
         } else {
-          setSongs([]);
+          setSongs((artistData?.topSongs ?? []).slice(0, 20));
         }
 
-        if (albumsResult.status === 'fulfilled') {
-          setAlbums((albumsResult.value ?? []).slice(0, 10));
+        if (fetchedAlbums.length > 0) {
+          setAlbums(fetchedAlbums.slice(0, 10));
         } else {
-          setAlbums([]);
+          setAlbums((artistData?.topAlbums ?? []).slice(0, 10));
         }
       } catch (err) {
         console.error('Failed to load artist:', err);
@@ -82,7 +108,7 @@ export default function ArtistDetailsScreen() {
       setLoading(false);
     }
     load();
-  }, [artistId]);
+  }, [artistId, artistName]);
 
   const imageUrl = getBestImage(artist?.image ?? [], '500x500');
 

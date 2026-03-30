@@ -49,6 +49,26 @@ export default function AlbumDetailsScreen() {
   const songs: Song[] = Array.isArray(album?.songs) ? album.songs : [];
   const imageUrl = getBestImage(album?.image ?? [], '500x500');
   const artistName = getAlbumArtistNames(album);
+  const albumArtists: Array<{ id: string; name: string }> = (() => {
+    const raw = (album as any)?.artists;
+    const list = Array.isArray(raw)
+      ? raw
+      : [raw?.primary, raw?.featured, raw?.all].filter(Array.isArray).flat();
+
+    const seen = new Set<string>();
+    return list
+      .map((a: any) => ({
+        id: typeof a?.id === 'string' ? a.id.trim() : '',
+        name: typeof a?.name === 'string' ? a.name.trim() : '',
+      }))
+      .filter((a: { id: string; name: string }) => a.name.length > 0)
+      .filter((a: { id: string; name: string }) => {
+        const key = `${a.id}:${a.name.toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  })();
 
   const openSearch = () => {
     const parent = navigation.getParent() as any;
@@ -86,6 +106,26 @@ export default function AlbumDetailsScreen() {
           <Text style={[styles.albumMeta, { color: colors.textSecondary }]}>
             {artistName}
           </Text>
+          {albumArtists.length > 0 && (
+            <View style={styles.artistChipsRow}>
+              {albumArtists.map((artist) => (
+                <TouchableOpacity
+                  key={`${artist.id || artist.name}-${artist.name}`}
+                  style={[styles.artistChip, { borderColor: colors.separator }]}
+                  onPress={() =>
+                    navigation.navigate('ArtistDetails', {
+                      artistId: artist.id || artist.name,
+                      artistName: artist.name,
+                    })
+                  }
+                >
+                  <Text style={[styles.artistChipText, { color: colors.text }]} numberOfLines={1}>
+                    {artist.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           <Text style={[styles.albumSub, { color: colors.textSecondary }]}>
             {songs.length} Songs  |  {album?.year ?? ''}
           </Text>
@@ -134,7 +174,7 @@ export default function AlbumDetailsScreen() {
         song={selectedSong}
         visible={optionsVisible}
         onClose={() => setOptionsVisible(false)}
-        onGoToArtist={(id, name) => navigation.navigate('ArtistDetails', { artistId: id, artistName: name })}
+        onGoToArtist={(id, name) => navigation.navigate('ArtistDetails', { artistId: id || name, artistName: name })}
       />
     </SafeAreaView>
   );
@@ -149,6 +189,9 @@ const styles = StyleSheet.create({
   albumArt: { width: 220, height: 220, borderRadius: 16, backgroundColor: '#ddd', marginBottom: 20 },
   albumTitle: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
   albumMeta: { fontSize: 15, marginTop: 6, textAlign: 'center' },
+  artistChipsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 10 },
+  artistChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, maxWidth: '90%' },
+  artistChipText: { fontSize: 12, fontWeight: '500' },
   albumSub: { fontSize: 13, marginTop: 4 },
   actionButtons: { flexDirection: 'row', gap: 12, marginTop: 20 },
   shuffleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 },
