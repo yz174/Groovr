@@ -35,6 +35,17 @@
     },
     "plugins": [
       [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/GoogleSans-Regular.ttf",
+            "./assets/fonts/GoogleSans-Medium.ttf",
+            "./assets/fonts/GoogleSans-Bold.ttf",
+            "./assets/fonts/GoogleSans-Italic.ttf"
+          ]
+        }
+      ],
+      [
         "expo-av",
         {
           "microphonePermission": "Allow Groovr to access microphone."
