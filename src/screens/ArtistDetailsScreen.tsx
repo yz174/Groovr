@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
-import { getArtist, getArtistSongs, getArtistAlbums, Artist, Song, Album, getBestImage, getSongArtistNames } from '../api/saavn';
+import { getArtist, getArtistSongs, getArtistAlbums, Artist, Song, Album, getBestImage, searchArtists, isSingleArtistCandidate } from '../api/saavn';
 import { usePlayerStore } from '../store/playerStore';
 import SongRow from '../components/SongRow';
 import AlbumCard from '../components/AlbumCard';
@@ -40,16 +40,44 @@ export default function ArtistDetailsScreen() {
     async function load() {
       setLoading(true);
       try {
-        const [artistData, artistSongs, artistAlbums] = await Promise.all([
-          getArtist(artistId),
-          getArtistSongs(artistId),
-          getArtistAlbums(artistId),
-        ]);
+        let artistData: Artist | null = null;
+        let resolvedArtistId = artistId;
+
+        try {
+          artistData = await getArtist(artistId);
+          resolvedArtistId = artistData?.id ?? artistId;
+        } catch {
+          // Fallback: if a composite or stale ID fails, resolve a valid single artist by name.
+          const candidates = await searchArtists(artistName, 10);
+          const fallback = candidates.find((a) => isSingleArtistCandidate(a)) ?? candidates[0];
+          if (!fallback?.id) throw new Error('No valid fallback artist found');
+          artistData = await getArtist(fallback.id);
+          resolvedArtistId = artistData?.id ?? fallback.id;
+        }
+
         setArtist(artistData);
-        setSongs(artistSongs.slice(0, 20));
-        setAlbums(artistAlbums.slice(0, 10));
+
+        const [songsResult, albumsResult] = await Promise.allSettled([
+          getArtistSongs(resolvedArtistId),
+          getArtistAlbums(resolvedArtistId),
+        ]);
+
+        if (songsResult.status === 'fulfilled') {
+          setSongs((songsResult.value ?? []).slice(0, 20));
+        } else {
+          setSongs([]);
+        }
+
+        if (albumsResult.status === 'fulfilled') {
+          setAlbums((albumsResult.value ?? []).slice(0, 10));
+        } else {
+          setAlbums([]);
+        }
       } catch (err) {
         console.error('Failed to load artist:', err);
+        setArtist(null);
+        setSongs([]);
+        setAlbums([]);
       }
       setLoading(false);
     }

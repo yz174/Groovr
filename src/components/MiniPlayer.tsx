@@ -26,9 +26,10 @@ export default function MiniPlayer() {
   const { colors, isDark } = useTheme();
   const { isPlaying, isLoading, togglePlay, skipNext, skipPrevious } = usePlayerStore();
   const currentSong = usePlayerStore(s => s.currentSong());
+  const isBlockingOverlayVisible = usePlayerStore(s => s.isBlockingOverlayVisible);
   const insets = useSafeAreaInsets();
 
-  if (!currentSong) return null;
+  if (!currentSong || isBlockingOverlayVisible) return null;
 
   const imageUrl = getBestImage(currentSong.image, '150x150');
   const artistName = getSongArtistNames(currentSong);

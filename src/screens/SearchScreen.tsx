@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
-import { searchSongs, searchAlbums, searchArtists, Song, Album, Artist } from '../api/saavn';
+import { searchSongs, searchAlbums, searchArtists, Song, Album, Artist, isSingleArtistCandidate } from '../api/saavn';
 import { useSearchStore } from '../store/searchStore';
 import { usePlayerStore } from '../store/playerStore';
 import SongRow from '../components/SongRow';
@@ -59,7 +59,7 @@ export default function SearchScreen() {
         searchAlbums(q, 10),
         searchArtists(q, 10),
       ]);
-      setResults({ songs, albums, artists });
+      setResults({ songs, albums, artists: artists.filter(isSingleArtistCandidate) });
     } catch {}
     setLoading(false);
   }, [setResults, setLoading]);
@@ -103,6 +103,7 @@ export default function SearchScreen() {
       case 'Songs':
         return (
           <FlatList
+            key="search-songs-list"
             data={results.songs}
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
@@ -121,6 +122,7 @@ export default function SearchScreen() {
       case 'Albums':
         return (
           <FlatList
+            key="search-albums-list"
             data={results.albums}
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
@@ -137,6 +139,7 @@ export default function SearchScreen() {
       case 'Artists':
         return (
           <FlatList
+            key="search-artists-grid-3"
             data={results.artists}
             keyExtractor={item => item.id}
             numColumns={3}

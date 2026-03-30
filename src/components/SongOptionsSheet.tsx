@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,10 +46,16 @@ export default function SongOptionsSheet({
   const { colors, isDark } = useTheme();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['65%'], []);
+  const [playlistPickerVisible, setPlaylistPickerVisible] = useState(false);
 
-  const { playNext, addToQueue } = usePlayerStore();
-  const { toggleFavorite, isFavorite, downloadSong, deleteDownload, isDownloaded } = useLibraryStore();
+  const { playNext, addToQueue, setBlockingOverlayVisible } = usePlayerStore();
+  const { toggleFavorite, isFavorite, downloadSong, deleteDownload, isDownloaded, playlists, addToPlaylist } = useLibraryStore();
   const downloadProgress = usePlayerStore(s => song ? s.downloadProgress[song.id] : undefined);
+
+  useEffect(() => {
+    setBlockingOverlayVisible(visible || playlistPickerVisible);
+    return () => setBlockingOverlayVisible(false);
+  }, [visible, playlistPickerVisible, setBlockingOverlayVisible]);
 
   const handleClose = useCallback(() => {
     bottomSheetRef.current?.close();
@@ -65,6 +72,30 @@ export default function SongOptionsSheet({
   const isDownloading = downloadProgress != null && downloadProgress < 1;
 
   const primaryArtist = song.artists?.primary?.[0];
+
+  const handleAddToPlaylist = () => {
+    if (playlists.length === 0) {
+      Alert.alert('No Playlists', 'No playlist exists yet. Create one in the Playlists tab first.');
+      return;
+    }
+    setPlaylistPickerVisible(true);
+  };
+
+  const handleSelectPlaylist = (playlistId: string, playlistName: string) => {
+    const alreadyExists = playlists
+      .find(p => p.id === playlistId)
+      ?.songs.some(s => s.id === song.id);
+
+    if (alreadyExists) {
+      Alert.alert('Already Added', `"${song.name}" is already in "${playlistName}".`);
+      return;
+    }
+
+    addToPlaylist(playlistId, song);
+    Alert.alert('Added to Playlist', `"${song.name}" was added to "${playlistName}".`);
+    setPlaylistPickerVisible(false);
+    handleClose();
+  };
 
   const menuItems: MenuItem[] = [
     {
@@ -86,7 +117,10 @@ export default function SongOptionsSheet({
     {
       icon: 'list-outline',
       label: 'Add to Playlist',
-      onPress: () => { onAddToPlaylist?.(song); handleClose(); },
+      onPress: () => {
+        onAddToPlaylist?.(song);
+        handleAddToPlaylist();
+      },
     },
     ...(song.album?.id ? [{
       icon: 'disc-outline',
@@ -135,75 +169,116 @@ export default function SongOptionsSheet({
   ];
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      index={0}
-      snapPoints={snapPoints}
-      onClose={onClose}
-      enablePanDownToClose
-      backgroundStyle={{ backgroundColor: colors.bottomSheet, borderRadius: 24 }}
-      handleIndicatorStyle={{ backgroundColor: colors.separator, width: 36 }}
-      backdropComponent={() => (
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          onPress={handleClose}
-          activeOpacity={1}
-        >
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
-        </TouchableOpacity>
-      )}
-    >
-      {/* Song Header */}
-      <View style={[styles.header, { borderBottomColor: colors.separator }]}>
-        <Image
-          source={{ uri: imageUrl || undefined }}
-          style={styles.headerImage}
-          defaultSource={require('../../assets/icon.png')}
-        />
-        <View style={styles.headerInfo}>
-          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-            {song.name}
-          </Text>
-          <Text style={[styles.headerSub, { color: colors.textSecondary }]} numberOfLines={1}>
-            {artistName}  |  {duration}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => toggleFavorite(song)} hitSlop={8}>
-          <Ionicons
-            name={isFav ? 'heart' : 'heart-outline'}
-            size={22}
-            color={isFav ? Colors.primary : colors.textSecondary}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Menu Items */}
-      <BottomSheetScrollView>
-        {menuItems.map((item, i) => (
+    <>
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={0}
+        snapPoints={snapPoints}
+        onClose={onClose}
+        enablePanDownToClose
+        backgroundStyle={{ backgroundColor: colors.bottomSheet, borderRadius: 24 }}
+        handleIndicatorStyle={{ backgroundColor: colors.separator, width: 36 }}
+        backdropComponent={() => (
           <TouchableOpacity
-            key={i}
-            style={[styles.menuItem, { borderBottomColor: colors.separator }]}
-            onPress={item.onPress}
-            activeOpacity={0.7}
+            style={StyleSheet.absoluteFill}
+            onPress={handleClose}
+            activeOpacity={1}
           >
-            {item.loading ? (
-              <ActivityIndicator size={20} color={Colors.primary} style={styles.menuIcon} />
-            ) : (
-              <Ionicons
-                name={item.icon as any}
-                size={20}
-                color={item.color ?? colors.icon}
-                style={styles.menuIcon}
-              />
-            )}
-            <Text style={[styles.menuLabel, { color: item.color ?? colors.text }]}>
-              {item.label}
-            </Text>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
           </TouchableOpacity>
-        ))}
-        <View style={{ height: 32 }} />
-      </BottomSheetScrollView>
-    </BottomSheet>
+        )}
+      >
+        {/* Song Header */}
+        <View style={[styles.header, { borderBottomColor: colors.separator }]}> 
+          <Image
+            source={{ uri: imageUrl || undefined }}
+            style={styles.headerImage}
+            defaultSource={require('../../assets/icon.png')}
+          />
+          <View style={styles.headerInfo}>
+            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+              {song.name}
+            </Text>
+            <Text style={[styles.headerSub, { color: colors.textSecondary }]} numberOfLines={1}>
+              {artistName}  |  {duration}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={() => toggleFavorite(song)} hitSlop={8}>
+            <Ionicons
+              name={isFav ? 'heart' : 'heart-outline'}
+              size={22}
+              color={isFav ? Colors.primary : colors.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Menu Items */}
+        <BottomSheetScrollView>
+          {menuItems.map((item, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.menuItem, { borderBottomColor: colors.separator }]}
+              onPress={item.onPress}
+              activeOpacity={0.7}
+            >
+              {item.loading ? (
+                <ActivityIndicator size={20} color={Colors.primary} style={styles.menuIcon} />
+              ) : (
+                <Ionicons
+                  name={item.icon as any}
+                  size={20}
+                  color={item.color ?? colors.icon}
+                  style={styles.menuIcon}
+                />
+              )}
+              <Text style={[styles.menuLabel, { color: item.color ?? colors.text }]}> 
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <View style={{ height: 32 }} />
+        </BottomSheetScrollView>
+      </BottomSheet>
+
+      <Modal
+        visible={playlistPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPlaylistPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.playlistOverlay}
+          activeOpacity={1}
+          onPress={() => setPlaylistPickerVisible(false)}
+        >
+          <View style={[styles.playlistModal, { backgroundColor: colors.surfaceElevated }]}> 
+            <Text style={[styles.playlistTitle, { color: colors.text }]}>Add To Playlist</Text>
+            <BottomSheetScrollView>
+              {playlists.map((playlist) => (
+                <TouchableOpacity
+                  key={playlist.id}
+                  style={[styles.playlistItem, { borderBottomColor: colors.separator }]}
+                  onPress={() => handleSelectPlaylist(playlist.id, playlist.name)}
+                >
+                  <Text style={[styles.playlistName, { color: colors.text }]} numberOfLines={1}>
+                    {playlist.name}
+                  </Text>
+                  <Text style={[styles.playlistMeta, { color: colors.textSecondary }]}> 
+                    {playlist.songs.length} song{playlist.songs.length !== 1 ? 's' : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </BottomSheetScrollView>
+            <TouchableOpacity
+              style={[styles.playlistCancel, { borderColor: colors.separator }]}
+              onPress={() => setPlaylistPickerVisible(false)}
+            >
+              <Text style={[styles.playlistCancelText, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -249,5 +324,49 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 15,
     fontWeight: '400',
+  },
+  playlistOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  playlistModal: {
+    width: '100%',
+    maxHeight: '70%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    paddingTop: 12,
+  },
+  playlistTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  playlistItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  playlistName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  playlistMeta: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  playlistCancel: {
+    margin: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  playlistCancelText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

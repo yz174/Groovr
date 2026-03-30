@@ -21,7 +21,7 @@ import { Colors } from '../theme/colors';
 import {
   Song, Album, Artist,
   searchSongs, searchAlbums, searchArtists,
-  getBestImage, getSongArtistNames,
+  getBestImage, getSongArtistNames, hasArtistImage, isSingleArtistCandidate,
 } from '../api/saavn';
 import { usePlayerStore } from '../store/playerStore';
 import SongRow from '../components/SongRow';
@@ -87,7 +87,9 @@ export default function HomeScreen() {
       );
       const merged = artistResults.flat().slice(0, 18);
       const unique = merged.filter((a, i) => merged.findIndex(x => x.id === a.id) === i);
-      setArtists(unique);
+      const preferred = unique.filter(a => isSingleArtistCandidate(a) && hasArtistImage(a));
+      const fallback = unique.filter(a => isSingleArtistCandidate(a) && !hasArtistImage(a));
+      setArtists([...preferred, ...fallback].slice(0, 18));
     } catch (err) {
       console.error('Failed to load home data:', err);
     } finally {
@@ -175,6 +177,7 @@ export default function HomeScreen() {
               </View>
             )}
             <FlatList
+              key="home-songs-list"
               data={sortedSongs}
               keyExtractor={item => item.id}
               renderItem={({ item }) => (
@@ -192,6 +195,7 @@ export default function HomeScreen() {
       case 'Artists':
         return (
           <FlatList
+            key="home-artists-grid-3"
             data={artists}
             keyExtractor={item => item.id}
             numColumns={3}
@@ -207,6 +211,7 @@ export default function HomeScreen() {
       case 'Albums':
         return (
           <FlatList
+            key="home-albums-grid-2"
             data={albums}
             keyExtractor={item => item.id}
             numColumns={2}

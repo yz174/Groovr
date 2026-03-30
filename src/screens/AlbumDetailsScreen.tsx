@@ -50,6 +50,13 @@ export default function AlbumDetailsScreen() {
   const imageUrl = getBestImage(album?.image ?? [], '500x500');
   const artistName = getAlbumArtistNames(album);
 
+  const openSearch = () => {
+    const parent = navigation.getParent() as any;
+    if (parent) {
+      parent.navigate('SearchTab', { screen: 'Search' });
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
@@ -58,12 +65,14 @@ export default function AlbumDetailsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity hitSlop={8}>
-            <Ionicons name="search-outline" size={22} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity hitSlop={8}>
-            <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.topBarActions}>
+            <TouchableOpacity onPress={openSearch} hitSlop={8}>
+              <Ionicons name="search-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity hitSlop={8}>
+              <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Album Header */}
@@ -134,7 +143,8 @@ export default function AlbumDetailsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topBar: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   albumHeader: { alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
   albumArt: { width: 220, height: 220, borderRadius: 16, backgroundColor: '#ddd', marginBottom: 20 },
   albumTitle: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
