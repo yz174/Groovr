@@ -3,7 +3,6 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 // ─── Tab Navigator ─────────────────────────────────────────────────────────
 export type TabParamList = {
   HomeTab: NavigatorScreenParams<HomeStackParamList>;
-  SearchTab: NavigatorScreenParams<SearchStackParamList>;
   FavoritesTab: NavigatorScreenParams<FavoritesStackParamList>;
   PlaylistsTab: NavigatorScreenParams<PlaylistsStackParamList>;
   SettingsTab: NavigatorScreenParams<SettingsStackParamList>;
@@ -44,5 +43,6 @@ export type SettingsStackParamList = {
 // ─── Root Stack (modal layer) ──────────────────────────────────────────────
 export type RootStackParamList = {
   Main: NavigatorScreenParams<TabParamList>;
+  SearchFlow: NavigatorScreenParams<SearchStackParamList>;
   NowPlaying: undefined;
 };
