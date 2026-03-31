@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
 import { useSettingsStore } from '../store/settingsStore';
+import { checkAndApplyOtaUpdate, isOtaSupported } from '../services/otaUpdates';
 
 interface SettingRowProps {
   icon: string;
@@ -41,6 +42,10 @@ export default function SettingsScreen() {
   const { colors } = useTheme();
   const { theme, setTheme } = useSettingsStore();
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [otaStatus, setOtaStatus] = useState('Idle');
+
+  const otaSupported = isOtaSupported();
 
   const selectedThemeLabel = useMemo(() => {
     if (theme === 'light') return 'Light';
@@ -51,6 +56,30 @@ export default function SettingsScreen() {
   const pickTheme = (value: 'light' | 'dark') => {
     setTheme(value);
     setThemeMenuOpen(false);
+  };
+
+  const handleCheckForUpdates = async () => {
+    if (!otaSupported || checkingUpdates) return;
+
+    setCheckingUpdates(true);
+    setOtaStatus('Checking...');
+
+    const result = await checkAndApplyOtaUpdate();
+
+    if (result.status === 'upToDate') {
+      setOtaStatus('Up to date');
+      Alert.alert('No updates found', 'You are already on the latest version.');
+    } else if (result.status === 'applied') {
+      setOtaStatus('Update applied');
+    } else if (result.status === 'unsupported') {
+      setOtaStatus('Unavailable in development');
+      Alert.alert('Not available', 'OTA updates are available only in production/dev-client builds.');
+    } else {
+      setOtaStatus('Update failed');
+      Alert.alert('Update failed', result.message);
+    }
+
+    setCheckingUpdates(false);
   };
 
   return (
@@ -93,6 +122,23 @@ export default function SettingsScreen() {
               </View>
             )}
           </View>
+        </View>
+
+        {/* Updates */}
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Updates</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}> 
+          <SettingRow
+            icon="cloud-download-outline"
+            label="Check for updates"
+            value={otaSupported ? otaStatus : 'Build app to enable OTA'}
+            onPress={otaSupported ? handleCheckForUpdates : undefined}
+            right={
+              checkingUpdates
+                ? <ActivityIndicator size="small" color={Colors.primary} />
+                : undefined
+            }
+            colors={colors}
+          />
         </View>
 
         {/* About */}
