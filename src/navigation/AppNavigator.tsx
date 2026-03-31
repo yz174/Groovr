@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView, BlurTargetView } from 'expo-blur';
 
 import { RootStackParamList, TabParamList, HomeStackParamList, SearchStackParamList, FavoritesStackParamList, PlaylistsStackParamList, SettingsStackParamList } from './types';
+import { MODAL_TRANSITION_OPTIONS, STACK_TRANSITION_OPTIONS, TAB_SWITCH_ANIMATION } from './animationPresets';
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
 import { usePlayerStore } from '../store/playerStore';
@@ -36,7 +37,7 @@ const SettingsStack = createNativeStackNavigator<SettingsStackParamList>();
 function HomeStackNav() {
   const { colors } = useTheme();
   return (
-    <HomeStack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+    <HomeStack.Navigator screenOptions={{ ...STACK_TRANSITION_OPTIONS, contentStyle: { backgroundColor: colors.background } }}>
       <HomeStack.Screen name="Home" component={HomeScreen} />
       <HomeStack.Screen name="ArtistDetails" component={ArtistDetailsScreen} />
       <HomeStack.Screen name="AlbumDetails" component={AlbumDetailsScreen} />
@@ -47,7 +48,7 @@ function HomeStackNav() {
 function SearchStackNav() {
   const { colors } = useTheme();
   return (
-    <SearchStack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+    <SearchStack.Navigator screenOptions={{ ...STACK_TRANSITION_OPTIONS, contentStyle: { backgroundColor: colors.background } }}>
       <SearchStack.Screen name="Search" component={SearchScreen} />
       <SearchStack.Screen name="ArtistDetails" component={ArtistDetailsScreen} />
       <SearchStack.Screen name="AlbumDetails" component={AlbumDetailsScreen} />
@@ -58,7 +59,7 @@ function SearchStackNav() {
 function FavoritesStackNav() {
   const { colors } = useTheme();
   return (
-    <FavoritesStack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+    <FavoritesStack.Navigator screenOptions={{ ...STACK_TRANSITION_OPTIONS, contentStyle: { backgroundColor: colors.background } }}>
       <FavoritesStack.Screen name="Favorites" component={FavoritesScreen} />
       <FavoritesStack.Screen name="ArtistDetails" component={ArtistDetailsScreen} />
       <FavoritesStack.Screen name="AlbumDetails" component={AlbumDetailsScreen} />
@@ -69,7 +70,7 @@ function FavoritesStackNav() {
 function PlaylistsStackNav() {
   const { colors } = useTheme();
   return (
-    <PlaylistsStack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+    <PlaylistsStack.Navigator screenOptions={{ ...STACK_TRANSITION_OPTIONS, contentStyle: { backgroundColor: colors.background } }}>
       <PlaylistsStack.Screen name="Playlists" component={PlaylistsScreen} />
       <PlaylistsStack.Screen name="PlaylistDetails" component={PlaylistDetailsScreen} />
     </PlaylistsStack.Navigator>
@@ -79,7 +80,7 @@ function PlaylistsStackNav() {
 function SettingsStackNav() {
   const { colors } = useTheme();
   return (
-    <SettingsStack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+    <SettingsStack.Navigator screenOptions={{ ...STACK_TRANSITION_OPTIONS, contentStyle: { backgroundColor: colors.background } }}>
       <SettingsStack.Screen name="Settings" component={SettingsScreen} />
     </SettingsStack.Navigator>
   );
@@ -112,6 +113,7 @@ function TabLayout() {
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
+          animation: TAB_SWITCH_ANIMATION,
           tabBarActiveTintColor: Colors.primary,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarStyle: {
@@ -132,7 +134,7 @@ function TabLayout() {
             shadowOffset: { width: 0, height: -4 },
           },
           tabBarItemStyle: {
-            width: '25%',
+            flex: 1,
             alignItems: 'center',
             justifyContent: 'center',
           },
@@ -179,6 +181,15 @@ function TabLayout() {
         })}
       >
         <Tab.Screen name="HomeTab" component={HomeStackNav} options={{ title: 'Home' }} />
+        <Tab.Screen
+          name="SearchTab"
+          component={SearchStackNav}
+          options={{
+            title: 'Search',
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
+          }}
+        />
         <Tab.Screen name="FavoritesTab" component={FavoritesStackNav} options={{ title: 'Favorites' }} />
         <Tab.Screen name="PlaylistsTab" component={PlaylistsStackNav} options={{ title: 'Playlists' }} />
         <Tab.Screen name="SettingsTab" component={SettingsStackNav} options={{ title: 'Settings' }} />
@@ -220,11 +231,10 @@ export default function AppNavigator() {
     >
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Main" component={TabLayout} />
-        <RootStack.Screen name="SearchFlow" component={SearchStackNav} />
         <RootStack.Screen
           name="NowPlaying"
           component={NowPlayingScreen}
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+          options={MODAL_TRANSITION_OPTIONS}
         />
       </RootStack.Navigator>
     </NavigationContainer>
