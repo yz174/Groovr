@@ -10,6 +10,9 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
+  Platform,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +46,7 @@ const ARTISTS_PAGE_SIZE_PER_QUERY = 3;
 const SUGGESTED_POPULAR_PAGE_SIZE = 12;
 const SONG_ROW_HEIGHT = 72;
 const COMPACT_SONG_ROW_HEIGHT = 56;
+const LOAD_MORE_MIN_DURATION_MS = 260;
 
 const QUERIES = {
   suggested: ['hindi hits 2024', 'bollywood top songs', 'arijit singh'],
@@ -70,14 +74,8 @@ export default function HomeScreen() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
-  const [songsPage, setSongsPage] = useState(1);
-  const [songsHasMore, setSongsHasMore] = useState(true);
   const [songsLoadingMore, setSongsLoadingMore] = useState(false);
-  const [artistsPage, setArtistsPage] = useState(1);
-  const [artistsHasMore, setArtistsHasMore] = useState(true);
   const [artistsLoadingMore, setArtistsLoadingMore] = useState(false);
-  const [albumsPage, setAlbumsPage] = useState(1);
-  const [albumsHasMore, setAlbumsHasMore] = useState(true);
   const [albumsLoadingMore, setAlbumsLoadingMore] = useState(false);
 
   const [sortMode, setSortMode] = useState<'Ascending' | 'Descending'>('Ascending');
@@ -86,6 +84,21 @@ export default function HomeScreen() {
   const [optionsVisible, setOptionsVisible] = useState(false);
   const songsRef = useRef<Song[]>([]);
   const sortedSongsRef = useRef<Song[]>([]);
+  const songsPageRef = useRef(1);
+  const songsHasMoreRef = useRef(true);
+  const songsFetchingRef = useRef(false);
+  const artistsPageRef = useRef(1);
+  const artistsHasMoreRef = useRef(true);
+  const artistsFetchingRef = useRef(false);
+  const albumsPageRef = useRef(1);
+  const albumsHasMoreRef = useRef(true);
+  const albumsFetchingRef = useRef(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
   const mergeUniqueById = useCallback(<T extends { id: string }>(current: T[], incoming: T[]) => {
     if (incoming.length === 0) return current;
@@ -125,17 +138,20 @@ export default function HomeScreen() {
       setAlbums(allAlbums);
       setArtists(artistsPageOne.artists);
 
-      setSongsPage(1);
-      setSongsHasMore(allSongs.length >= SONGS_PAGE_SIZE);
       setSongsLoadingMore(false);
+      songsPageRef.current = 1;
+      songsHasMoreRef.current = allSongs.length >= SONGS_PAGE_SIZE;
+      songsFetchingRef.current = false;
 
-      setArtistsPage(1);
-      setArtistsHasMore(artistsPageOne.hasMore);
       setArtistsLoadingMore(false);
+      artistsPageRef.current = 1;
+      artistsHasMoreRef.current = artistsPageOne.hasMore;
+      artistsFetchingRef.current = false;
 
-      setAlbumsPage(1);
-      setAlbumsHasMore(allAlbums.length >= ALBUMS_PAGE_SIZE);
       setAlbumsLoadingMore(false);
+      albumsPageRef.current = 1;
+      albumsHasMoreRef.current = allAlbums.length >= ALBUMS_PAGE_SIZE;
+      albumsFetchingRef.current = false;
 
     } catch (err) {
       console.error('Failed to load home data:', err);
@@ -179,58 +195,98 @@ export default function HomeScreen() {
   }, [activeTab]);
 
   const loadMoreSongs = useCallback(async () => {
-    if (loading || songsLoadingMore || !songsHasMore) return;
+    if (songsFetchingRef.current || !songsHasMoreRef.current) return;
+    songsFetchingRef.current = true;
     setSongsLoadingMore(true);
+    const startTime = Date.now();
     try {
-      const nextPage = songsPage + 1;
+      const nextPage = songsPageRef.current + 1;
       const nextSongs = await searchSongs(QUERIES.songs, SONGS_PAGE_SIZE, nextPage);
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setSongs((prev) => mergeUniqueById(prev, nextSongs));
-      setSongsPage(nextPage);
-      setSongsHasMore(nextSongs.length >= SONGS_PAGE_SIZE);
+      songsPageRef.current = nextPage;
+      const hasMore = nextSongs.length >= SONGS_PAGE_SIZE;
+      songsHasMoreRef.current = hasMore;
     } catch (err) {
       console.error('Failed to load more songs:', err);
     } finally {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < LOAD_MORE_MIN_DURATION_MS) {
+        await new Promise((resolve) => setTimeout(resolve, LOAD_MORE_MIN_DURATION_MS - elapsed));
+      }
+      songsFetchingRef.current = false;
       setSongsLoadingMore(false);
     }
-  }, [loading, mergeUniqueById, songsHasMore, songsLoadingMore, songsPage]);
+  }, [mergeUniqueById]);
 
   const loadMoreArtists = useCallback(async () => {
-    if (loading || artistsLoadingMore || !artistsHasMore) return;
+    if (artistsFetchingRef.current || !artistsHasMoreRef.current) return;
+    artistsFetchingRef.current = true;
     setArtistsLoadingMore(true);
+    const startTime = Date.now();
     try {
-      const nextPage = artistsPage + 1;
+      const nextPage = artistsPageRef.current + 1;
       const next = await fetchArtistsPage(nextPage);
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setArtists((prev) => mergeUniqueById(prev, next.artists));
-      setArtistsPage(nextPage);
-      setArtistsHasMore(next.hasMore);
+      artistsPageRef.current = nextPage;
+      artistsHasMoreRef.current = next.hasMore;
     } catch (err) {
       console.error('Failed to load more artists:', err);
     } finally {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < LOAD_MORE_MIN_DURATION_MS) {
+        await new Promise((resolve) => setTimeout(resolve, LOAD_MORE_MIN_DURATION_MS - elapsed));
+      }
+      artistsFetchingRef.current = false;
       setArtistsLoadingMore(false);
     }
-  }, [artistsHasMore, artistsLoadingMore, artistsPage, fetchArtistsPage, loading, mergeUniqueById]);
+  }, [fetchArtistsPage, mergeUniqueById]);
 
   const loadMoreAlbums = useCallback(async () => {
-    if (loading || albumsLoadingMore || !albumsHasMore) return;
+    if (albumsFetchingRef.current || !albumsHasMoreRef.current) return;
+    albumsFetchingRef.current = true;
     setAlbumsLoadingMore(true);
     try {
-      const nextPage = albumsPage + 1;
+      const nextPage = albumsPageRef.current + 1;
       const nextAlbums = await searchAlbums(QUERIES.albums, ALBUMS_PAGE_SIZE, nextPage);
       setAlbums((prev) => mergeUniqueById(prev, nextAlbums));
-      setAlbumsPage(nextPage);
-      setAlbumsHasMore(nextAlbums.length >= ALBUMS_PAGE_SIZE);
+      albumsPageRef.current = nextPage;
+      const hasMore = nextAlbums.length >= ALBUMS_PAGE_SIZE;
+      albumsHasMoreRef.current = hasMore;
     } catch (err) {
       console.error('Failed to load more albums:', err);
     } finally {
+      albumsFetchingRef.current = false;
       setAlbumsLoadingMore(false);
     }
-  }, [albumsHasMore, albumsLoadingMore, albumsPage, loading, mergeUniqueById]);
+  }, [mergeUniqueById]);
 
   const renderListFooter = useCallback((isLoadingMore: boolean) => {
     if (!isLoadingMore) return null;
     return (
       <View style={styles.listFooterLoader}>
         <ActivityIndicator size="small" color={Colors.primary} />
+      </View>
+    );
+  }, []);
+
+  const renderSongListFooter = useCallback((isLoadingMore: boolean) => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.polishedFooterLoader}>
+        <ActivityIndicator size="small" color={Colors.primary} />
+        <Text style={styles.polishedFooterText}>Loading more songs...</Text>
+      </View>
+    );
+  }, []);
+
+  const renderArtistListFooter = useCallback((isLoadingMore: boolean) => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.polishedFooterLoader}>
+        <ActivityIndicator size="small" color={Colors.primary} />
+        <Text style={styles.polishedFooterText}>Loading more artists...</Text>
       </View>
     );
   }, []);
@@ -280,6 +336,10 @@ export default function HomeScreen() {
       <AlbumCard album={item} onPress={handleAlbumPress} size={(SCREEN_WIDTH - 48) / 2} />
     </View>
   ), [handleAlbumPress]);
+
+  const songKeyExtractor = useCallback((item: Song) => item.id, []);
+  const artistKeyExtractor = useCallback((item: Artist) => item.id, []);
+  const albumKeyExtractor = useCallback((item: Album) => item.id, []);
 
   const renderContent = () => {
     if (loading && !refreshing) {
@@ -343,17 +403,17 @@ export default function HomeScreen() {
             <FlatList
               key="home-songs-list"
               data={sortedSongs}
-              keyExtractor={item => item.id}
+              keyExtractor={songKeyExtractor}
               renderItem={renderSortedSong}
               getItemLayout={getSongItemLayout}
-              initialNumToRender={8}
-              maxToRenderPerBatch={6}
+              initialNumToRender={15}
+              maxToRenderPerBatch={5}
               updateCellsBatchingPeriod={50}
-              windowSize={5}
-              removeClippedSubviews
+              windowSize={11}
+              removeClippedSubviews={Platform.OS === 'android'}
               onEndReached={loadMoreSongs}
-              onEndReachedThreshold={0.35}
-              ListFooterComponent={renderListFooter(songsLoadingMore)}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={renderSongListFooter(songsLoadingMore)}
               contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
             />
           </View>
@@ -364,17 +424,17 @@ export default function HomeScreen() {
           <FlatList
             key="home-artists-grid-3"
             data={artists}
-            keyExtractor={item => item.id}
+            keyExtractor={artistKeyExtractor}
             numColumns={3}
             renderItem={renderArtistGridItem}
-            initialNumToRender={12}
-            maxToRenderPerBatch={12}
-            updateCellsBatchingPeriod={16}
-            windowSize={7}
-            removeClippedSubviews
+            initialNumToRender={15}
+            maxToRenderPerBatch={9}
+            updateCellsBatchingPeriod={50}
+            windowSize={9}
+            removeClippedSubviews={Platform.OS === 'android'}
             onEndReached={loadMoreArtists}
-            onEndReachedThreshold={0.35}
-            ListFooterComponent={renderListFooter(artistsLoadingMore)}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={renderArtistListFooter(artistsLoadingMore)}
             contentContainerStyle={{ padding: 8, paddingBottom: contentPaddingBottom }}
           />
         );
@@ -384,16 +444,16 @@ export default function HomeScreen() {
           <FlatList
             key="home-albums-grid-2"
             data={albums}
-            keyExtractor={item => item.id}
+            keyExtractor={albumKeyExtractor}
             numColumns={2}
             renderItem={renderAlbumGridItem}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            updateCellsBatchingPeriod={16}
-            windowSize={7}
-            removeClippedSubviews
+            initialNumToRender={12}
+            maxToRenderPerBatch={6}
+            updateCellsBatchingPeriod={50}
+            windowSize={9}
+            removeClippedSubviews={Platform.OS === 'android'}
             onEndReached={loadMoreAlbums}
-            onEndReachedThreshold={0.35}
+            onEndReachedThreshold={0.5}
             ListFooterComponent={renderListFooter(albumsLoadingMore)}
             contentContainerStyle={{ padding: 8, paddingBottom: contentPaddingBottom }}
           />
@@ -587,10 +647,10 @@ const SuggestedTab = React.memo(function SuggestedTab({ recentlyPlayed, artists,
       showsVerticalScrollIndicator={false}
       getItemLayout={getCompactSongItemLayout}
       initialNumToRender={6}
-      maxToRenderPerBatch={6}
+      maxToRenderPerBatch={5}
       updateCellsBatchingPeriod={50}
-      windowSize={5}
-      removeClippedSubviews
+      windowSize={9}
+      removeClippedSubviews={Platform.OS === 'android'}
       ListFooterComponent={
         <View style={styles.viewMoreWrap}>
           <TouchableOpacity style={styles.viewMoreButton} onPress={onViewMoreSongs} activeOpacity={0.85}>
@@ -664,6 +724,18 @@ const styles = StyleSheet.create({
   radioDot: { width: 10, height: 10, borderRadius: 5 },
   sortOptionText: { fontSize: 15 },
   listFooterLoader: { paddingVertical: 16 },
+  polishedFooterLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  polishedFooterText: {
+    color: '#8B8B8B',
+    fontSize: 13,
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
+  },
   viewMoreWrap: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20, alignItems: 'center' },
   viewMoreButton: {
     backgroundColor: '#fff',
