@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView, BlurTargetView } from 'expo-blur';
 
 import { RootStackParamList, TabParamList, HomeStackParamList, SearchStackParamList, FavoritesStackParamList, PlaylistsStackParamList, SettingsStackParamList } from './types';
 import { useTheme } from '../hooks/useTheme';
@@ -89,17 +90,32 @@ function SettingsStackNav() {
 function TabLayout() {
   const { colors, isDark } = useTheme();
   const currentSong = usePlayerStore(s => s.currentSong());
-  const tabBackgroundColor = isDark ? 'rgba(28, 28, 30, 0.97)' : 'rgba(255, 255, 255, 0.95)';
+  const isAndroid = Platform.OS === 'android';
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+  // Android: callback ref forces a re-render when BlurTargetView mounts.
+  // useRef alone won't work — refs don't trigger re-renders, so BlurView.componentDidUpdate
+  // never fires and blurTargetId stays null from the initial componentDidMount.
+  const [blurTargetNode, setBlurTargetNode] = useState<View | null>(null);
+  const blurTargetCallbackRef = useCallback((node: View | null) => {
+    setBlurTargetNode(node);
+  }, []);
+  // A new object identity when blurTargetNode changes so BlurView.componentDidUpdate
+  // sees prevProps.blurTarget.current !== this.props.blurTarget.current and re-resolves
+  // the native node handle.
+  const blurTargetProp = useMemo(() => ({ current: blurTargetNode }), [blurTargetNode]);
+
+  const tint = isDark ? 'dark' : 'light';
+  const tabOverlayColor = isDark ? 'rgba(18, 20, 27, 0.15)' : 'rgba(255, 255, 255, 0.15)';
+
+  const renderTabs = () => (
+    <>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarActiveTintColor: Colors.primary,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarStyle: {
-            backgroundColor: tabBackgroundColor,
+            backgroundColor: 'transparent',
             borderTopColor: 'transparent',
             borderTopWidth: 0,
             borderTopLeftRadius: 26,
@@ -145,6 +161,21 @@ function TabLayout() {
             const [active, inactive] = icons[route.name] ?? ['ellipse', 'ellipse-outline'];
             return <Ionicons name={(focused ? active : inactive) as any} size={iconSizes[route.name] ?? size} color={color} />;
           },
+          tabBarBackground: () => (
+            <View style={[StyleSheet.absoluteFillObject, styles.tabBarBackgroundWrap]}>
+              <BlurView
+                tint={tint}
+                intensity={isDark ? 85 : 90}
+                style={StyleSheet.absoluteFill}
+                {...(isAndroid ? {
+                  blurMethod: 'dimezisBlurView',
+                  blurReductionFactor: 1,
+                  blurTarget: blurTargetProp,
+                } : {})}
+              />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: tabOverlayColor }]} />
+            </View>
+          ),
         })}
       >
         <Tab.Screen name="HomeTab" component={HomeStackNav} options={{ title: 'Home' }} />
@@ -153,6 +184,16 @@ function TabLayout() {
         <Tab.Screen name="SettingsTab" component={SettingsStackNav} options={{ title: 'Settings' }} />
       </Tab.Navigator>
       {currentSong && <MiniPlayer />}
+    </>
+  );
+
+  return isAndroid ? (
+    <BlurTargetView ref={blurTargetCallbackRef as any} style={{ flex: 1, backgroundColor: colors.background }}>
+      {renderTabs()}
+    </BlurTargetView>
+  ) : (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {renderTabs()}
     </View>
   );
 }
@@ -189,3 +230,11 @@ export default function AppNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarBackgroundWrap: {
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    overflow: 'hidden',
+  },
+});
