@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, ListRenderItem, TouchableOpacity, StyleSheet,
   Image, Alert, TextInput, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,19 +24,58 @@ export default function PlaylistsScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
 
-  const handleCreate = () => {
+  const handleShowCreate = useCallback(() => {
+    setShowCreate(true);
+  }, []);
+
+  const handleCreate = useCallback(() => {
     if (!newName.trim()) return;
     createPlaylist(newName.trim());
     setNewName('');
     setShowCreate(false);
-  };
+  }, [createPlaylist, newName]);
 
-  const handleDelete = (playlist: Playlist) => {
+  const handleDelete = useCallback((playlist: Playlist) => {
     Alert.alert('Delete Playlist', `Delete "${playlist.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deletePlaylist(playlist.id) },
     ]);
-  };
+  }, [deletePlaylist]);
+
+  const handleOpenPlaylist = useCallback((playlistId: string) => {
+    navigation.navigate('PlaylistDetails', { playlistId });
+  }, [navigation]);
+
+  const renderPlaylistRow: ListRenderItem<Playlist> = useCallback(({ item }) => (
+    <TouchableOpacity
+      style={[styles.playlistRow, { borderBottomColor: colors.separator }]}
+      onPress={() => handleOpenPlaylist(item.id)}
+      activeOpacity={0.7}
+    >
+      {item.coverImage ? (
+        <Image source={{ uri: item.coverImage }} style={styles.playlistImage} />
+      ) : (
+        <View style={[styles.playlistImagePlaceholder, { backgroundColor: Colors.primaryLight }]}>
+          <Ionicons name="musical-notes" size={24} color={Colors.primary} />
+        </View>
+      )}
+      <View style={styles.playlistInfo}>
+        <MixedText style={[styles.playlistName, { color: colors.text }]} numberOfLines={1}>{item.name}</MixedText>
+        <Text style={[styles.playlistMeta, { color: colors.textSecondary }]}>
+          {item.songs.length} song{item.songs.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+      <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={8}>
+        <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  ), [colors.separator, colors.text, colors.textSecondary, handleDelete, handleOpenPlaylist]);
+
+  const getPlaylistItemLayout = useCallback((_: ArrayLike<Playlist> | null | undefined, index: number) => ({
+    length: 80,
+    offset: 80 * index,
+    index,
+  }), []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -46,7 +85,7 @@ export default function PlaylistsScreen() {
           <Ionicons name="musical-notes" size={28} color={Colors.primary} />
           <Text style={[styles.logoText, { color: colors.text }]}>Groovr</Text>
         </View>
-        <TouchableOpacity onPress={() => setShowCreate(true)} hitSlop={8}>
+        <TouchableOpacity onPress={handleShowCreate} hitSlop={8}>
           <Ionicons name="add" size={28} color={Colors.primary} />
         </TouchableOpacity>
       </View>
@@ -60,7 +99,7 @@ export default function PlaylistsScreen() {
           </Text>
           <TouchableOpacity
             style={[styles.createBtn, { backgroundColor: Colors.primary }]}
-            onPress={() => setShowCreate(true)}
+            onPress={handleShowCreate}
           >
             <Text style={styles.createBtnText}>Create Playlist</Text>
           </TouchableOpacity>
@@ -69,30 +108,13 @@ export default function PlaylistsScreen() {
         <FlatList
           data={playlists}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.playlistRow, { borderBottomColor: colors.separator }]}
-              onPress={() => navigation.navigate('PlaylistDetails', { playlistId: item.id })}
-              activeOpacity={0.7}
-            >
-              {item.coverImage ? (
-                <Image source={{ uri: item.coverImage }} style={styles.playlistImage} />
-              ) : (
-                <View style={[styles.playlistImagePlaceholder, { backgroundColor: Colors.primaryLight }]}>
-                  <Ionicons name="musical-notes" size={24} color={Colors.primary} />
-                </View>
-              )}
-              <View style={styles.playlistInfo}>
-                <MixedText style={[styles.playlistName, { color: colors.text }]} numberOfLines={1}>{item.name}</MixedText>
-                <Text style={[styles.playlistMeta, { color: colors.textSecondary }]}>
-                  {item.songs.length} song{item.songs.length !== 1 ? 's' : ''}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={8}>
-                <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          )}
+          renderItem={renderPlaylistRow}
+          getItemLayout={getPlaylistItemLayout}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          updateCellsBatchingPeriod={50}
+          windowSize={5}
+          removeClippedSubviews
           contentContainerStyle={{ paddingBottom: 140 }}
         />
       )}

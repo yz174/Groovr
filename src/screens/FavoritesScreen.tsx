@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,29 @@ export default function FavoritesScreen() {
   const { playQueue } = usePlayerStore();
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [optionsVisible, setOptionsVisible] = useState(false);
+
+  const handleFavoriteSongPress = useCallback((song: Song) => {
+    playQueue(favorites, favorites.findIndex((x) => x.id === song.id));
+  }, [favorites, playQueue]);
+
+  const handleSongOptionsPress = useCallback((song: Song) => {
+    setSelectedSong(song);
+    setOptionsVisible(true);
+  }, []);
+
+  const renderFavoriteSong = useCallback(({ item }: { item: Song }) => (
+    <SongRow
+      song={item}
+      onPress={handleFavoriteSongPress}
+      onOptionsPress={handleSongOptionsPress}
+    />
+  ), [handleFavoriteSongPress, handleSongOptionsPress]);
+
+  const getSongItemLayout = useCallback((_: ArrayLike<Song> | null | undefined, index: number) => ({
+    length: 72,
+    offset: 72 * index,
+    index,
+  }), []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -59,13 +82,13 @@ export default function FavoritesScreen() {
           <FlatList
             data={favorites}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <SongRow
-                song={item}
-                onPress={(s) => playQueue(favorites, favorites.findIndex(x => x.id === s.id))}
-                onOptionsPress={(s) => { setSelectedSong(s); setOptionsVisible(true); }}
-              />
-            )}
+            renderItem={renderFavoriteSong}
+            getItemLayout={getSongItemLayout}
+            initialNumToRender={8}
+            maxToRenderPerBatch={6}
+            updateCellsBatchingPeriod={50}
+            windowSize={5}
+            removeClippedSubviews
             contentContainerStyle={{ paddingBottom: 140 }}
           />
         </>

@@ -1,15 +1,13 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Switch, ScrollView, Alert,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
-import { useSettingsStore, AudioQuality } from '../store/settingsStore';
-import { useLibraryStore } from '../store/libraryStore';
-import { usePlayerStore } from '../store/playerStore';
+import { useSettingsStore } from '../store/settingsStore';
 
 interface SettingRowProps {
   icon: string;
@@ -39,49 +37,20 @@ function SettingRow({ icon, label, value, onPress, right, colors }: SettingRowPr
   );
 }
 
-const QUALITY_OPTIONS: AudioQuality[] = ['96kbps', '160kbps', '320kbps'];
-
 export default function SettingsScreen() {
-  const { colors, isDark } = useTheme();
-  const {
-    theme, setTheme,
-    audioQuality, setAudioQuality,
-    downloadQuality, setDownloadQuality,
-    streamOverCellular, setStreamOverCellular,
-    downloadOverCellular, setDownloadOverCellular,
-  } = useSettingsStore();
-  const { downloads, deleteDownload } = useLibraryStore();
+  const { colors } = useTheme();
+  const { theme, setTheme } = useSettingsStore();
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
 
-  const totalDownloadSize = downloads.reduce((acc, d) => acc + (d.size ?? 0), 0);
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
+  const selectedThemeLabel = useMemo(() => {
+    if (theme === 'light') return 'Light';
+    if (theme === 'dark') return 'Dark';
+    return 'System Default';
+  }, [theme]);
 
-  const handleClearDownloads = () => {
-    Alert.alert('Clear Downloads', `Delete all ${downloads.length} downloaded songs?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Clear All', style: 'destructive',
-        onPress: () => downloads.forEach(d => deleteDownload(d.song.id)),
-      },
-    ]);
-  };
-
-  const handleTheme = () => {
-    const options: Array<SettingsState['theme']> = ['system', 'light', 'dark'];
-    const idx = options.indexOf(theme);
-    setTheme(options[(idx + 1) % options.length]);
-  };
-
-  const handleQuality = () => {
-    const idx = QUALITY_OPTIONS.indexOf(audioQuality);
-    setAudioQuality(QUALITY_OPTIONS[(idx + 1) % QUALITY_OPTIONS.length]);
-  };
-
-  const handleDownloadQuality = () => {
-    const idx = QUALITY_OPTIONS.indexOf(downloadQuality);
-    setDownloadQuality(QUALITY_OPTIONS[(idx + 1) % QUALITY_OPTIONS.length]);
+  const pickTheme = (value: 'light' | 'dark') => {
+    setTheme(value);
+    setThemeMenuOpen(false);
   };
 
   return (
@@ -98,78 +67,32 @@ export default function SettingsScreen() {
         {/* Appearance */}
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Appearance</Text>
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <SettingRow
-            icon="color-palette-outline"
-            label="Theme"
-            value={theme === 'system' ? 'System Default' : theme === 'light' ? 'Light' : 'Dark'}
-            onPress={handleTheme}
-            colors={colors}
-          />
-        </View>
-
-        {/* Playback */}
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Playback</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <SettingRow
-            icon="musical-note-outline"
-            label="Streaming Quality"
-            value={audioQuality}
-            onPress={handleQuality}
-            colors={colors}
-          />
-          <SettingRow
-            icon="cellular-outline"
-            label="Stream Over Cellular"
-            colors={colors}
-            right={
-              <Switch
-                value={streamOverCellular}
-                onValueChange={setStreamOverCellular}
-                trackColor={{ false: colors.separator, true: Colors.primaryLight }}
-                thumbColor={streamOverCellular ? Colors.primary : colors.textSecondary}
-              />
-            }
-          />
-        </View>
-
-        {/* Downloads */}
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Downloads</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <SettingRow
-            icon="download-outline"
-            label="Download Quality"
-            value={downloadQuality}
-            onPress={handleDownloadQuality}
-            colors={colors}
-          />
-          <SettingRow
-            icon="cellular-outline"
-            label="Download Over Cellular"
-            colors={colors}
-            right={
-              <Switch
-                value={downloadOverCellular}
-                onValueChange={setDownloadOverCellular}
-                trackColor={{ false: colors.separator, true: Colors.primaryLight }}
-                thumbColor={downloadOverCellular ? Colors.primary : colors.textSecondary}
-              />
-            }
-          />
-          <SettingRow
-            icon="folder-outline"
-            label="Downloaded Songs"
-            value={`${downloads.length} songs  ·  ${formatSize(totalDownloadSize)}`}
-            colors={colors}
-          />
-          {downloads.length > 0 && (
+          <View style={styles.themeMenuAnchor}>
             <SettingRow
-              icon="trash-outline"
-              label="Clear All Downloads"
-              onPress={handleClearDownloads}
+              icon="color-palette-outline"
+              label="Theme"
+              value={selectedThemeLabel}
+              onPress={() => setThemeMenuOpen(v => !v)}
+              right={<Ionicons name={themeMenuOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />}
               colors={colors}
-              right={<Ionicons name="chevron-forward" size={18} color={Colors.primary} />}
             />
-          )}
+            {themeMenuOpen && (
+              <View style={[styles.themeMenuOverlay, { borderColor: colors.separator, backgroundColor: colors.surfaceElevated ?? colors.surface }]}> 
+                <TouchableOpacity style={styles.themeOption} onPress={() => pickTheme('light')}>
+                  <View style={[styles.themeOptionCircle, { borderColor: Colors.primary }]}>
+                    {theme === 'light' && <View style={[styles.themeOptionCircleInner, { backgroundColor: Colors.primary }]} />}
+                  </View>
+                  <Text style={[styles.themeOptionText, { color: colors.text }]}>Light</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.themeOption, { borderTopColor: colors.separator }]} onPress={() => pickTheme('dark')}>
+                  <View style={[styles.themeOptionCircle, { borderColor: Colors.primary }]}>
+                    {theme === 'dark' && <View style={[styles.themeOptionCircleInner, { backgroundColor: Colors.primary }]} />}
+                  </View>
+                  <Text style={[styles.themeOptionText, { color: colors.text }]}>Dark</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* About */}
@@ -183,9 +106,6 @@ export default function SettingsScreen() {
   );
 }
 
-// Need to import type for handleTheme
-type SettingsState = { theme: 'system' | 'light' | 'dark' };
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
@@ -194,11 +114,54 @@ const styles = StyleSheet.create({
     fontWeight: 'normal' },
   sectionLabel: { fontSize: 13, fontFamily: 'Flamante-Roma-Medium',
     fontWeight: 'normal', textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
-  card: { marginHorizontal: 16, borderRadius: 12, overflow: 'hidden' },
+  card: { marginHorizontal: 16, borderRadius: 12, overflow: 'visible' },
   settingRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   settingIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   settingInfo: { flex: 1 },
   settingLabel: { fontSize: 15, fontFamily: 'Flamante-Roma-Medium',
     fontWeight: 'normal' },
   settingValue: { fontSize: 13, marginTop: 2 },
+  themeMenuAnchor: {
+    position: 'relative',
+    zIndex: 20,
+  },
+  themeMenuOverlay: {
+    position: 'absolute',
+    top: 46,
+    right: 8,
+    width: 132,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    zIndex: 100,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  themeOptionCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeOptionCircleInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  themeOptionText: {
+    fontSize: 14,
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
+  },
 });

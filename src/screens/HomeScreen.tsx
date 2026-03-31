@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   FlatList,
+  ListRenderItem,
   TouchableOpacity,
   StyleSheet,
-  RefreshControl,
   Image,
   Dimensions,
   ActivityIndicator,
@@ -21,7 +21,7 @@ import { Colors } from '../theme/colors';
 import {
   Song, Album, Artist,
   searchSongs, searchAlbums, searchArtists,
-  getBestImage, getSongArtistNames, hasArtistImage, isSingleArtistCandidate,
+  getBestImage, hasArtistImage, isSingleArtistCandidate,
 } from '../api/saavn';
 import { usePlayerStore } from '../store/playerStore';
 import SongRow from '../components/SongRow';
@@ -37,6 +37,12 @@ type HomeTab = 'Suggested' | 'Songs' | 'Artists' | 'Albums';
 const TABS: HomeTab[] = ['Suggested', 'Songs', 'Artists', 'Albums'];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SONGS_PAGE_SIZE = 20;
+const ALBUMS_PAGE_SIZE = 20;
+const ARTISTS_PAGE_SIZE_PER_QUERY = 3;
+const SUGGESTED_POPULAR_PAGE_SIZE = 12;
+const SONG_ROW_HEIGHT = 72;
+const COMPACT_SONG_ROW_HEIGHT = 56;
 
 const QUERIES = {
   suggested: ['hindi hits 2024', 'bollywood top songs', 'arijit singh'],
@@ -64,46 +70,91 @@ export default function HomeScreen() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
+  const [songsPage, setSongsPage] = useState(1);
+  const [songsHasMore, setSongsHasMore] = useState(true);
+  const [songsLoadingMore, setSongsLoadingMore] = useState(false);
+  const [artistsPage, setArtistsPage] = useState(1);
+  const [artistsHasMore, setArtistsHasMore] = useState(true);
+  const [artistsLoadingMore, setArtistsLoadingMore] = useState(false);
+  const [albumsPage, setAlbumsPage] = useState(1);
+  const [albumsHasMore, setAlbumsHasMore] = useState(true);
+  const [albumsLoadingMore, setAlbumsLoadingMore] = useState(false);
+  const [suggestedPage, setSuggestedPage] = useState(1);
+  const [suggestedHasMore, setSuggestedHasMore] = useState(true);
+  const [suggestedLoadingMore, setSuggestedLoadingMore] = useState(false);
 
   const [sortMode, setSortMode] = useState<'Ascending' | 'Descending'>('Ascending');
   const [showSort, setShowSort] = useState(false);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [optionsVisible, setOptionsVisible] = useState(false);
+  const songsRef = useRef<Song[]>([]);
+  const sortedSongsRef = useRef<Song[]>([]);
+
+  const mergeUniqueById = useCallback(<T extends { id: string }>(current: T[], incoming: T[]) => {
+    if (incoming.length === 0) return current;
+    const seen = new Set(current.map((item) => item.id));
+    const appended = incoming.filter((item) => !seen.has(item.id));
+    return appended.length > 0 ? [...current, ...appended] : current;
+  }, []);
+
+  const fetchArtistsPage = useCallback(async (page: number) => {
+    const perQueryResults = await Promise.all(
+      QUERIES.artists.map((q) => searchArtists(q, ARTISTS_PAGE_SIZE_PER_QUERY, page))
+    );
+    const flat = perQueryResults.flat();
+    const unique = flat.filter((a, i) => flat.findIndex((x) => x.id === a.id) === i);
+    const preferred = unique.filter((a) => isSingleArtistCandidate(a) && hasArtistImage(a));
+    const fallback = unique.filter((a) => isSingleArtistCandidate(a) && !hasArtistImage(a));
+    const merged = [...preferred, ...fallback];
+    const hasMore = perQueryResults.some((items) => items.length >= ARTISTS_PAGE_SIZE_PER_QUERY);
+    return { artists: merged, hasMore };
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [s1, s2, s3, allSongs, allAlbums] = await Promise.all([
+      const [s1, s2, s3, allSongs, allAlbums, artistsPageOne] = await Promise.all([
         searchSongs(QUERIES.suggested[0], 6),
-        searchSongs(QUERIES.suggested[1], 6),
+        searchSongs(QUERIES.suggested[1], SUGGESTED_POPULAR_PAGE_SIZE, 1),
         searchSongs(QUERIES.suggested[2], 10),
-        searchSongs(QUERIES.songs, 30),
-        searchAlbums(QUERIES.albums, 20),
+        searchSongs(QUERIES.songs, SONGS_PAGE_SIZE, 1),
+        searchAlbums(QUERIES.albums, ALBUMS_PAGE_SIZE, 1),
+        fetchArtistsPage(1),
       ]);
       setRecentlyPlayed(s1);
       setTrendingSongs(s2);
       setMostPlayed(s3);
       setSongs(allSongs);
       setAlbums(allAlbums);
+      setArtists(artistsPageOne.artists);
 
-      // Load artists
-      const artistResults = await Promise.all(
-        QUERIES.artists.map(q => searchArtists(q, 3))
-      );
-      const merged = artistResults.flat().slice(0, 18);
-      const unique = merged.filter((a, i) => merged.findIndex(x => x.id === a.id) === i);
-      const preferred = unique.filter(a => isSingleArtistCandidate(a) && hasArtistImage(a));
-      const fallback = unique.filter(a => isSingleArtistCandidate(a) && !hasArtistImage(a));
-      setArtists([...preferred, ...fallback].slice(0, 18));
+      setSongsPage(1);
+      setSongsHasMore(allSongs.length >= SONGS_PAGE_SIZE);
+      setSongsLoadingMore(false);
+
+      setArtistsPage(1);
+      setArtistsHasMore(artistsPageOne.hasMore);
+      setArtistsLoadingMore(false);
+
+      setAlbumsPage(1);
+      setAlbumsHasMore(allAlbums.length >= ALBUMS_PAGE_SIZE);
+      setAlbumsLoadingMore(false);
+
+      setSuggestedPage(1);
+      setSuggestedHasMore(s2.length >= SUGGESTED_POPULAR_PAGE_SIZE);
+      setSuggestedLoadingMore(false);
     } catch (err) {
       console.error('Failed to load home data:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchArtistsPage]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    songsRef.current = songs;
+  }, [songs]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -111,10 +162,10 @@ export default function HomeScreen() {
   }, [loadData]);
 
   const handleSongPress = useCallback((song: Song, queue?: Song[]) => {
-    const q = queue ?? songs;
+    const q = queue ?? songsRef.current;
     const idx = q.findIndex(s => s.id === song.id);
     playQueue(q, idx >= 0 ? idx : 0);
-  }, [songs, playQueue]);
+  }, [playQueue]);
 
   const handleArtistPress = useCallback((artist: Artist) => {
     navigation.navigate('ArtistDetails', { artistId: artist.id, artistName: artist.name });
@@ -128,9 +179,129 @@ export default function HomeScreen() {
     (navigation as any).navigate('Main', { screen: 'SearchTab', params: { screen: 'Search' } });
   }, [navigation]);
 
-  const sortedSongs = [...songs].sort((a, b) => {
-    return sortMode === 'Ascending' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-  });
+  const changeHomeTab = useCallback((nextTab: HomeTab) => {
+    if (activeTab === nextTab) return;
+    setActiveTab(nextTab);
+  }, [activeTab]);
+
+  const loadMoreSongs = useCallback(async () => {
+    if (loading || songsLoadingMore || !songsHasMore) return;
+    setSongsLoadingMore(true);
+    try {
+      const nextPage = songsPage + 1;
+      const nextSongs = await searchSongs(QUERIES.songs, SONGS_PAGE_SIZE, nextPage);
+      setSongs((prev) => mergeUniqueById(prev, nextSongs));
+      setSongsPage(nextPage);
+      setSongsHasMore(nextSongs.length >= SONGS_PAGE_SIZE);
+    } catch (err) {
+      console.error('Failed to load more songs:', err);
+    } finally {
+      setSongsLoadingMore(false);
+    }
+  }, [loading, mergeUniqueById, songsHasMore, songsLoadingMore, songsPage]);
+
+  const loadMoreArtists = useCallback(async () => {
+    if (loading || artistsLoadingMore || !artistsHasMore) return;
+    setArtistsLoadingMore(true);
+    try {
+      const nextPage = artistsPage + 1;
+      const next = await fetchArtistsPage(nextPage);
+      setArtists((prev) => mergeUniqueById(prev, next.artists));
+      setArtistsPage(nextPage);
+      setArtistsHasMore(next.hasMore);
+    } catch (err) {
+      console.error('Failed to load more artists:', err);
+    } finally {
+      setArtistsLoadingMore(false);
+    }
+  }, [artistsHasMore, artistsLoadingMore, artistsPage, fetchArtistsPage, loading, mergeUniqueById]);
+
+  const loadMoreAlbums = useCallback(async () => {
+    if (loading || albumsLoadingMore || !albumsHasMore) return;
+    setAlbumsLoadingMore(true);
+    try {
+      const nextPage = albumsPage + 1;
+      const nextAlbums = await searchAlbums(QUERIES.albums, ALBUMS_PAGE_SIZE, nextPage);
+      setAlbums((prev) => mergeUniqueById(prev, nextAlbums));
+      setAlbumsPage(nextPage);
+      setAlbumsHasMore(nextAlbums.length >= ALBUMS_PAGE_SIZE);
+    } catch (err) {
+      console.error('Failed to load more albums:', err);
+    } finally {
+      setAlbumsLoadingMore(false);
+    }
+  }, [albumsHasMore, albumsLoadingMore, albumsPage, loading, mergeUniqueById]);
+
+  const loadMoreSuggested = useCallback(async () => {
+    if (loading || suggestedLoadingMore || !suggestedHasMore) return;
+    setSuggestedLoadingMore(true);
+    try {
+      const nextPage = suggestedPage + 1;
+      const nextSongs = await searchSongs(QUERIES.suggested[1], SUGGESTED_POPULAR_PAGE_SIZE, nextPage);
+      setTrendingSongs((prev) => mergeUniqueById(prev, nextSongs));
+      setSuggestedPage(nextPage);
+      setSuggestedHasMore(nextSongs.length >= SUGGESTED_POPULAR_PAGE_SIZE);
+    } catch (err) {
+      console.error('Failed to load more suggested songs:', err);
+    } finally {
+      setSuggestedLoadingMore(false);
+    }
+  }, [loading, mergeUniqueById, suggestedHasMore, suggestedLoadingMore, suggestedPage]);
+
+  const renderListFooter = useCallback((isLoadingMore: boolean) => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.listFooterLoader}>
+        <ActivityIndicator size="small" color={Colors.primary} />
+      </View>
+    );
+  }, []);
+
+  const sortedSongs = useMemo(() => {
+    return [...songs].sort((a, b) => {
+      return sortMode === 'Ascending' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+    });
+  }, [songs, sortMode]);
+  useEffect(() => {
+    sortedSongsRef.current = sortedSongs;
+  }, [sortedSongs]);
+
+  const handleSortedSongPress = useCallback((song: Song) => {
+    const q = sortedSongsRef.current;
+    const idx = q.findIndex((s) => s.id === song.id);
+    playQueue(q, idx >= 0 ? idx : 0);
+  }, [playQueue]);
+
+  const handleSongOptionsPress = useCallback((song: Song) => {
+    setSelectedSong(song);
+    setOptionsVisible(true);
+  }, []);
+
+  const renderSortedSong = useCallback(({ item }: { item: Song }) => (
+    <SongRow
+      song={item}
+      onPress={handleSortedSongPress}
+      onOptionsPress={handleSongOptionsPress}
+    />
+  ), [handleSongOptionsPress, handleSortedSongPress]);
+
+  const getSongItemLayout = useCallback((_: ArrayLike<Song> | null | undefined, index: number) => ({
+    length: SONG_ROW_HEIGHT,
+    offset: SONG_ROW_HEIGHT * index,
+    index,
+  }), []);
+
+  const renderArtistGridItem = useCallback(({ item }: { item: Artist }) => (
+    <View style={{ flex: 1, alignItems: 'center', marginVertical: 8 }}>
+      <ArtistCard artist={item} onPress={handleArtistPress} size={90} />
+    </View>
+  ), [handleArtistPress]);
+
+  const renderAlbumGridItem = useCallback(({ item }: { item: Album }) => (
+    <View style={{ flex: 1, padding: 8 }}>
+      <AlbumCard album={item} onPress={handleAlbumPress} size={(SCREEN_WIDTH - 48) / 2} />
+    </View>
+  ), [handleAlbumPress]);
 
   const renderContent = () => {
     if (loading && !refreshing) {
@@ -150,11 +321,14 @@ export default function HomeScreen() {
           trendingSongs={trendingSongs}
           onSongPress={handleSongPress}
           onArtistPress={handleArtistPress}
-          onOptionsPress={(song) => { setSelectedSong(song); setOptionsVisible(true); }}
+          onOptionsPress={handleSongOptionsPress}
           onSeeAll={(section) => {
-            if (section === 'artists') setActiveTab('Artists');
-            else setActiveTab('Songs');
+            if (section === 'artists') changeHomeTab('Artists');
+            else changeHomeTab('Songs');
           }}
+          onEndReached={loadMoreSuggested}
+          hasMore={suggestedHasMore}
+          loadingMore={suggestedLoadingMore}
           contentPaddingBottom={contentPaddingBottom}
           colors={colors}
         />;
@@ -194,13 +368,16 @@ export default function HomeScreen() {
               key="home-songs-list"
               data={sortedSongs}
               keyExtractor={item => item.id}
-              renderItem={({ item }) => (
-                <SongRow
-                  song={item}
-                  onPress={(s) => handleSongPress(s, sortedSongs)}
-                  onOptionsPress={(s) => { setSelectedSong(s); setOptionsVisible(true); }}
-                />
-              )}
+              renderItem={renderSortedSong}
+              getItemLayout={getSongItemLayout}
+              initialNumToRender={8}
+              maxToRenderPerBatch={6}
+              updateCellsBatchingPeriod={50}
+              windowSize={5}
+              removeClippedSubviews
+              onEndReached={loadMoreSongs}
+              onEndReachedThreshold={0.35}
+              ListFooterComponent={renderListFooter(songsLoadingMore)}
               contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
             />
           </View>
@@ -213,11 +390,15 @@ export default function HomeScreen() {
             data={artists}
             keyExtractor={item => item.id}
             numColumns={3}
-            renderItem={({ item }) => (
-              <View style={{ flex: 1, alignItems: 'center', marginVertical: 8 }}>
-                <ArtistCard artist={item} onPress={handleArtistPress} size={90} />
-              </View>
-            )}
+            renderItem={renderArtistGridItem}
+            initialNumToRender={12}
+            maxToRenderPerBatch={12}
+            updateCellsBatchingPeriod={16}
+            windowSize={7}
+            removeClippedSubviews
+            onEndReached={loadMoreArtists}
+            onEndReachedThreshold={0.35}
+            ListFooterComponent={renderListFooter(artistsLoadingMore)}
             contentContainerStyle={{ padding: 8, paddingBottom: contentPaddingBottom }}
           />
         );
@@ -229,11 +410,15 @@ export default function HomeScreen() {
             data={albums}
             keyExtractor={item => item.id}
             numColumns={2}
-            renderItem={({ item }) => (
-              <View style={{ flex: 1, padding: 8 }}>
-                <AlbumCard album={item} onPress={handleAlbumPress} size={(SCREEN_WIDTH - 48) / 2} />
-              </View>
-            )}
+            renderItem={renderAlbumGridItem}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            updateCellsBatchingPeriod={16}
+            windowSize={7}
+            removeClippedSubviews
+            onEndReached={loadMoreAlbums}
+            onEndReachedThreshold={0.35}
+            ListFooterComponent={renderListFooter(albumsLoadingMore)}
             contentContainerStyle={{ padding: 8, paddingBottom: contentPaddingBottom }}
           />
         );
@@ -263,7 +448,7 @@ export default function HomeScreen() {
         {TABS.map(tab => (
           <TouchableOpacity
             key={tab}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => changeHomeTab(tab)}
             style={styles.tab}
           >
             <Text style={[
@@ -307,13 +492,39 @@ interface SuggestedTabProps {
   onArtistPress: (artist: Artist) => void;
   onOptionsPress: (song: Song) => void;
   onSeeAll: (section: 'recentlyPlayed' | 'artists' | 'trending' | 'popular') => void;
+  onEndReached: () => void;
+  hasMore: boolean;
+  loadingMore: boolean;
   contentPaddingBottom: number;
   colors: any;
 }
 
-function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSongPress, onArtistPress, onOptionsPress, onSeeAll, contentPaddingBottom, colors }: SuggestedTabProps) {
-  return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: contentPaddingBottom }}>
+const SuggestedTab = React.memo(function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSongPress, onArtistPress, onOptionsPress, onSeeAll, onEndReached, hasMore, loadingMore, contentPaddingBottom, colors }: SuggestedTabProps) {
+  const handleTrendingSongPress = useCallback((song: Song) => {
+    onSongPress(song, trendingSongs);
+  }, [onSongPress, trendingSongs]);
+
+  const renderPopularSong: ListRenderItem<Song> = useCallback(({ item }) => (
+    <SongRow
+      song={item}
+      onPress={handleTrendingSongPress}
+      onOptionsPress={onOptionsPress}
+      compact
+    />
+  ), [handleTrendingSongPress, onOptionsPress]);
+
+  const getCompactSongItemLayout = useCallback((_: ArrayLike<Song> | null | undefined, index: number) => ({
+    length: COMPACT_SONG_ROW_HEIGHT,
+    offset: COMPACT_SONG_ROW_HEIGHT * index,
+    index,
+  }), []);
+
+  const handleEndReached = useCallback(() => {
+    if (hasMore) onEndReached();
+  }, [hasMore, onEndReached]);
+
+  const header = (
+    <>
       {/* Recently Played */}
       {recentlyPlayed.length > 0 && (
         <View style={styles.section}>
@@ -388,26 +599,39 @@ function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSo
       )}
 
       {/* Songs list preview */}
-      {trendingSongs.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Songs</Text>
-            <TouchableOpacity onPress={() => onSeeAll('popular')}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
-          </View>
-          {trendingSongs.slice(0, 6).map(song => (
-            <SongRow
-              key={song.id}
-              song={song}
-              onPress={(s) => onSongPress(s, trendingSongs)}
-              onOptionsPress={onOptionsPress}
-              compact
-            />
-          ))}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Songs</Text>
+          <TouchableOpacity onPress={() => onSeeAll('popular')}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
         </View>
-      )}
-    </ScrollView>
+      </View>
+    </>
   );
-}
+
+  return (
+    <FlatList
+      data={trendingSongs}
+      keyExtractor={(item) => item.id}
+      renderItem={renderPopularSong}
+      ListHeaderComponent={header}
+      showsVerticalScrollIndicator={false}
+      getItemLayout={getCompactSongItemLayout}
+      initialNumToRender={6}
+      maxToRenderPerBatch={6}
+      updateCellsBatchingPeriod={50}
+      windowSize={5}
+      removeClippedSubviews
+      onEndReached={handleEndReached}
+      onEndReachedThreshold={0.35}
+      ListFooterComponent={loadingMore ? (
+        <View style={styles.listFooterLoader}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+        </View>
+      ) : null}
+      contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+    />
+  );
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -468,4 +692,5 @@ const styles = StyleSheet.create({
   radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   radioDot: { width: 10, height: 10, borderRadius: 5 },
   sortOptionText: { fontSize: 15 },
+  listFooterLoader: { paddingVertical: 16 },
 });

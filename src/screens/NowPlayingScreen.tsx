@@ -20,6 +20,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import { getBestImage, getSongArtistNames, formatDuration } from '../api/saavn';
 import SongOptionsSheet from '../components/SongOptionsSheet';
 import MixedText from '../components/MixedText';
+import SwipeGestureView from '../components/SwipeGestureView';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ARTWORK_SIZE = SCREEN_WIDTH - 64;
@@ -54,8 +55,12 @@ export default function NowPlayingScreen() {
   const repeatColor = repeatMode !== 'none' ? Colors.primary : colors.textSecondary;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <SwipeGestureView
+      style={styles.container}
+      onSwipeDown={() => navigation.goBack()}
+    >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Top Bar */}
       <View style={styles.topBar}>
@@ -167,32 +172,33 @@ export default function NowPlayingScreen() {
         </View>
       </View>
 
-      <SongOptionsSheet
-        song={currentSong}
-        visible={optionsVisible}
-        onClose={() => setOptionsVisible(false)}
-        onGoToArtist={(artistId, artistName) => {
-          setOptionsVisible(false);
-          navigation.goBack();
-          setTimeout(() => {
-            (navigation as any).navigate('Main', {
-              screen: 'HomeTab',
-              params: { screen: 'ArtistDetails', params: { artistId, artistName } },
-            });
-          }, 0);
-        }}
-        onGoToAlbum={(albumId, albumName) => {
-          setOptionsVisible(false);
-          navigation.goBack();
-          setTimeout(() => {
-            (navigation as any).navigate('Main', {
-              screen: 'HomeTab',
-              params: { screen: 'AlbumDetails', params: { albumId, albumName } },
-            });
-          }, 0);
-        }}
-      />
-    </SafeAreaView>
+        <SongOptionsSheet
+          song={currentSong}
+          visible={optionsVisible}
+          onClose={() => setOptionsVisible(false)}
+          onGoToArtist={(artistId, artistName) => {
+            setOptionsVisible(false);
+            navigation.goBack();
+            setTimeout(() => {
+              (navigation as any).navigate('Main', {
+                screen: 'HomeTab',
+                params: { screen: 'ArtistDetails', params: { artistId, artistName } },
+              });
+            }, 0);
+          }}
+          onGoToAlbum={(albumId, albumName) => {
+            setOptionsVisible(false);
+            navigation.goBack();
+            setTimeout(() => {
+              (navigation as any).navigate('Main', {
+                screen: 'HomeTab',
+                params: { screen: 'AlbumDetails', params: { albumId, albumName } },
+              });
+            }, 0);
+          }}
+        />
+      </SafeAreaView>
+    </SwipeGestureView>
   );
 }
 

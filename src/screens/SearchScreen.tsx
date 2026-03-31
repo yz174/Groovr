@@ -28,6 +28,7 @@ import { SearchStackParamList } from '../navigation/types';
 
 type NavProp = NativeStackNavigationProp<SearchStackParamList>;
 const SEARCH_TABS = ['Songs', 'Artists', 'Albums'] as const;
+const SONG_ROW_HEIGHT = 72;
 
 export default function SearchScreen() {
   const { colors } = useTheme();
@@ -48,6 +49,16 @@ export default function SearchScreen() {
   const [optionsVisible, setOptionsVisible] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSongsRef = useRef<Song[]>([]);
+  const recentSongsRef = useRef<Song[]>([]);
+
+  useEffect(() => {
+    searchSongsRef.current = results.songs;
+  }, [results.songs]);
+
+  useEffect(() => {
+    recentSongsRef.current = recentSongs;
+  }, [recentSongs]);
 
   const performSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -102,6 +113,83 @@ export default function SearchScreen() {
   const showResults = query.length > 0 && hasResults;
   const showNotFound = query.length > 0 && !isLoading && !hasResults;
 
+  const handleSongOptionsPress = useCallback((song: Song) => {
+    setSelectedSong(song);
+    setOptionsVisible(true);
+  }, []);
+
+  const handleSearchSongPress = useCallback((song: Song) => {
+    addRecentSong(song);
+    const queue = searchSongsRef.current;
+    playQueue(queue, queue.findIndex((x) => x.id === song.id));
+  }, [addRecentSong, playQueue]);
+
+  const handleRecentSongPress = useCallback((song: Song) => {
+    addRecentSong(song);
+    const queue = recentSongsRef.current;
+    playQueue(queue, queue.findIndex((x) => x.id === song.id));
+  }, [addRecentSong, playQueue]);
+
+  const handleAlbumPress = useCallback((album: Album) => {
+    navigation.navigate('AlbumDetails', { albumId: album.id, albumName: album.name });
+  }, [navigation]);
+
+  const handleArtistPress = useCallback((artist: Artist) => {
+    navigation.navigate('ArtistDetails', { artistId: artist.id, artistName: artist.name });
+  }, [navigation]);
+
+  const renderSongResult = useCallback(({ item }: { item: Song }) => (
+    <SongRow
+      song={item}
+      onPress={handleSearchSongPress}
+      onOptionsPress={handleSongOptionsPress}
+    />
+  ), [handleSearchSongPress, handleSongOptionsPress]);
+
+  const renderAlbumResult = useCallback(({ item }: { item: Album }) => (
+    <AlbumCard
+      album={item}
+      horizontal
+      onPress={handleAlbumPress}
+    />
+  ), [handleAlbumPress]);
+
+  const renderArtistResult = useCallback(({ item }: { item: Artist }) => (
+    <View style={{ flex: 1, alignItems: 'center', marginVertical: 8 }}>
+      <ArtistCard
+        artist={item}
+        size={90}
+        onPress={handleArtistPress}
+      />
+    </View>
+  ), [handleArtistPress]);
+
+  const renderRecentSearchItem = useCallback(({ item }: { item: string }) => (
+    <TouchableOpacity
+      style={[styles.recentItem, { borderBottomColor: colors.separator }]}
+      onPress={() => handleRecentPress(item)}
+    >
+      <Text style={[styles.recentText, { color: colors.text }]}>{item}</Text>
+      <TouchableOpacity onPress={() => removeRecentSearch(item)} hitSlop={8}>
+        <Ionicons name="close" size={18} color={colors.textSecondary} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  ), [colors.separator, colors.text, colors.textSecondary, handleRecentPress, removeRecentSearch]);
+
+  const renderRecentSongItem = useCallback(({ item }: { item: Song }) => (
+    <SongRow
+      song={item}
+      onPress={handleRecentSongPress}
+      showMediaButtons={false}
+    />
+  ), [handleRecentSongPress]);
+
+  const getSongItemLayout = useCallback((_: ArrayLike<Song> | null | undefined, index: number) => ({
+    length: SONG_ROW_HEIGHT,
+    offset: SONG_ROW_HEIGHT * index,
+    index,
+  }), []);
+
   const renderResults = () => {
     switch (activeTab) {
       case 'Songs':
@@ -110,16 +198,13 @@ export default function SearchScreen() {
             key="search-songs-list"
             data={results.songs}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <SongRow
-                song={item}
-                onPress={(s) => {
-                  addRecentSong(s);
-                  playQueue(results.songs, results.songs.findIndex(x => x.id === s.id));
-                }}
-                onOptionsPress={(s) => { setSelectedSong(s); setOptionsVisible(true); }}
-              />
-            )}
+            renderItem={renderSongResult}
+            getItemLayout={getSongItemLayout}
+            initialNumToRender={8}
+            maxToRenderPerBatch={6}
+            updateCellsBatchingPeriod={50}
+            windowSize={5}
+            removeClippedSubviews
             contentContainerStyle={{ paddingBottom: 140 }}
             keyboardShouldPersistTaps="handled"
           />
@@ -130,13 +215,12 @@ export default function SearchScreen() {
             key="search-albums-list"
             data={results.albums}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <AlbumCard
-                album={item}
-                horizontal
-                onPress={(a) => navigation.navigate('AlbumDetails', { albumId: a.id, albumName: a.name })}
-              />
-            )}
+            renderItem={renderAlbumResult}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            updateCellsBatchingPeriod={16}
+            windowSize={7}
+            removeClippedSubviews
             contentContainerStyle={{ paddingBottom: 140 }}
             keyboardShouldPersistTaps="handled"
           />
@@ -148,15 +232,12 @@ export default function SearchScreen() {
             data={results.artists}
             keyExtractor={item => item.id}
             numColumns={3}
-            renderItem={({ item }) => (
-              <View style={{ flex: 1, alignItems: 'center', marginVertical: 8 }}>
-                <ArtistCard
-                  artist={item}
-                  size={90}
-                  onPress={(a) => navigation.navigate('ArtistDetails', { artistId: a.id, artistName: a.name })}
-                />
-              </View>
-            )}
+            renderItem={renderArtistResult}
+            initialNumToRender={12}
+            maxToRenderPerBatch={12}
+            updateCellsBatchingPeriod={16}
+            windowSize={7}
+            removeClippedSubviews
             contentContainerStyle={{ padding: 8, paddingBottom: 140 }}
             keyboardShouldPersistTaps="handled"
           />
@@ -204,17 +285,12 @@ export default function SearchScreen() {
           <FlatList
             data={recentSearches}
             keyExtractor={(item, i) => item + i}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.recentItem, { borderBottomColor: colors.separator }]}
-                onPress={() => handleRecentPress(item)}
-              >
-                <Text style={[styles.recentText, { color: colors.text }]}>{item}</Text>
-                <TouchableOpacity onPress={() => removeRecentSearch(item)} hitSlop={8}>
-                  <Ionicons name="close" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )}
+            renderItem={renderRecentSearchItem}
+            initialNumToRender={8}
+            maxToRenderPerBatch={6}
+            updateCellsBatchingPeriod={50}
+            windowSize={5}
+            removeClippedSubviews
             keyboardShouldPersistTaps="handled"
           />
         </View>
@@ -262,16 +338,13 @@ export default function SearchScreen() {
             <FlatList
               data={recentSongs}
               keyExtractor={item => item.id}
-              renderItem={({ item }) => (
-                <SongRow
-                  song={item}
-                  onPress={(s) => {
-                    addRecentSong(s);
-                    playQueue(recentSongs, recentSongs.findIndex(x => x.id === s.id));
-                  }}
-                  showMediaButtons={false}
-                />
-              )}
+              renderItem={renderRecentSongItem}
+              getItemLayout={getSongItemLayout}
+              initialNumToRender={8}
+              maxToRenderPerBatch={6}
+              updateCellsBatchingPeriod={50}
+              windowSize={5}
+              removeClippedSubviews
               contentContainerStyle={{ paddingBottom: 140 }}
               keyboardShouldPersistTaps="handled"
             />

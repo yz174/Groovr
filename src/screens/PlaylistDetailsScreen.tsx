@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +20,7 @@ export default function PlaylistDetailsScreen() {
   const route = useRoute<RoutePropType>();
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const { playlists, removeFromPlaylist } = useLibraryStore();
+  const { playlists } = useLibraryStore();
   const { playQueue } = usePlayerStore();
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [optionsVisible, setOptionsVisible] = useState(false);
@@ -28,8 +28,33 @@ export default function PlaylistDetailsScreen() {
   const playlist = playlists.find(p => p.id === route.params.playlistId);
   if (!playlist) return null;
 
-  const coverImage = playlist.coverImage
-    ?? (playlist.songs[0] ? getBestImage(playlist.songs[0].image, '500x500') : null);
+  const coverImage = useMemo(() => {
+    return playlist.coverImage
+      ?? (playlist.songs[0] ? getBestImage(playlist.songs[0].image, '500x500') : null);
+  }, [playlist.coverImage, playlist.songs]);
+
+  const handlePlaylistSongPress = useCallback((song: Song) => {
+    playQueue(playlist.songs, playlist.songs.findIndex((x) => x.id === song.id));
+  }, [playQueue, playlist.songs]);
+
+  const handleSongOptionsPress = useCallback((song: Song) => {
+    setSelectedSong(song);
+    setOptionsVisible(true);
+  }, []);
+
+  const renderPlaylistSong = useCallback(({ item }: { item: Song }) => (
+    <SongRow
+      song={item}
+      onPress={handlePlaylistSongPress}
+      onOptionsPress={handleSongOptionsPress}
+    />
+  ), [handlePlaylistSongPress, handleSongOptionsPress]);
+
+  const getSongItemLayout = useCallback((_: ArrayLike<Song> | null | undefined, index: number) => ({
+    length: 72,
+    offset: 72 * index,
+    index,
+  }), []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -76,13 +101,13 @@ export default function PlaylistDetailsScreen() {
             )}
           </View>
         )}
-        renderItem={({ item }) => (
-          <SongRow
-            song={item}
-            onPress={(s) => playQueue(playlist.songs, playlist.songs.findIndex(x => x.id === s.id))}
-            onOptionsPress={(s) => { setSelectedSong(s); setOptionsVisible(true); }}
-          />
-        )}
+        renderItem={renderPlaylistSong}
+        getItemLayout={getSongItemLayout}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        updateCellsBatchingPeriod={50}
+        windowSize={5}
+        removeClippedSubviews
         ListEmptyComponent={() => (
           <View style={styles.empty}>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
