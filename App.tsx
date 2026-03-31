@@ -13,6 +13,7 @@ import { usePlayerStore } from './src/store/playerStore';
 import { useSearchStore } from './src/store/searchStore';
 import { useSettingsStore } from './src/store/settingsStore';
 import { useTheme } from './src/hooks/useTheme';
+import { prefetchOtaUpdate } from './src/services/otaUpdates';
 
 const FONT_FAMILY = {
   regular: 'Flamante-Round-Book-FFP',
@@ -96,6 +97,9 @@ export default function App() {
     hydratePlayer();
     hydrateLibrary();
     hydrateSearch();
+
+    // Silently prefetch OTA updates so they are ready on next manual apply.
+    prefetchOtaUpdate();
   }, []);
 
   if (!fontsLoaded) return null;
