@@ -123,6 +123,41 @@ npm run android
 | `npm start` | Start the Metro bundler |
 | `npm run android` | Build and run on Android device or emulator |
 
+## OTA Updates (Expo Updates)
+
+Groovr is configured for OTA updates via `expo-updates`.
+
+1. Install EAS CLI (one-time):
+
+```bash
+npm install -g eas-cli
+```
+
+2. Log in and link this project:
+
+```bash
+eas login
+eas init
+```
+
+3. Build the app for a channel (example: production):
+
+```bash
+eas build -p android --profile production
+```
+
+4. Publish an OTA update to that same channel:
+
+```bash
+eas update --branch production --message "OTA: bug fixes"
+```
+
+5. In the app, open Settings and tap **Check for updates** to fetch and apply immediately.
+
+Notes:
+- OTA works in production/dev-client builds, not in Expo Go development mode.
+- `runtimeVersion` is tied to app version (`appVersion` policy), so bump app version for native-breaking changes.
+
 ## Troubleshooting
 
 **Metro cache issues:**
