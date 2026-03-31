@@ -79,9 +79,6 @@ export default function HomeScreen() {
   const [albumsPage, setAlbumsPage] = useState(1);
   const [albumsHasMore, setAlbumsHasMore] = useState(true);
   const [albumsLoadingMore, setAlbumsLoadingMore] = useState(false);
-  const [suggestedPage, setSuggestedPage] = useState(1);
-  const [suggestedHasMore, setSuggestedHasMore] = useState(true);
-  const [suggestedLoadingMore, setSuggestedLoadingMore] = useState(false);
 
   const [sortMode, setSortMode] = useState<'Ascending' | 'Descending'>('Ascending');
   const [showSort, setShowSort] = useState(false);
@@ -140,9 +137,6 @@ export default function HomeScreen() {
       setAlbumsHasMore(allAlbums.length >= ALBUMS_PAGE_SIZE);
       setAlbumsLoadingMore(false);
 
-      setSuggestedPage(1);
-      setSuggestedHasMore(s2.length >= SUGGESTED_POPULAR_PAGE_SIZE);
-      setSuggestedLoadingMore(false);
     } catch (err) {
       console.error('Failed to load home data:', err);
     } finally {
@@ -232,22 +226,6 @@ export default function HomeScreen() {
     }
   }, [albumsHasMore, albumsLoadingMore, albumsPage, loading, mergeUniqueById]);
 
-  const loadMoreSuggested = useCallback(async () => {
-    if (loading || suggestedLoadingMore || !suggestedHasMore) return;
-    setSuggestedLoadingMore(true);
-    try {
-      const nextPage = suggestedPage + 1;
-      const nextSongs = await searchSongs(QUERIES.suggested[1], SUGGESTED_POPULAR_PAGE_SIZE, nextPage);
-      setTrendingSongs((prev) => mergeUniqueById(prev, nextSongs));
-      setSuggestedPage(nextPage);
-      setSuggestedHasMore(nextSongs.length >= SUGGESTED_POPULAR_PAGE_SIZE);
-    } catch (err) {
-      console.error('Failed to load more suggested songs:', err);
-    } finally {
-      setSuggestedLoadingMore(false);
-    }
-  }, [loading, mergeUniqueById, suggestedHasMore, suggestedLoadingMore, suggestedPage]);
-
   const renderListFooter = useCallback((isLoadingMore: boolean) => {
     if (!isLoadingMore) return null;
     return (
@@ -326,9 +304,7 @@ export default function HomeScreen() {
             if (section === 'artists') changeHomeTab('Artists');
             else changeHomeTab('Songs');
           }}
-          onEndReached={loadMoreSuggested}
-          hasMore={suggestedHasMore}
-          loadingMore={suggestedLoadingMore}
+          onViewMoreSongs={() => changeHomeTab('Songs')}
           contentPaddingBottom={contentPaddingBottom}
           colors={colors}
         />;
@@ -492,14 +468,12 @@ interface SuggestedTabProps {
   onArtistPress: (artist: Artist) => void;
   onOptionsPress: (song: Song) => void;
   onSeeAll: (section: 'recentlyPlayed' | 'artists' | 'trending' | 'popular') => void;
-  onEndReached: () => void;
-  hasMore: boolean;
-  loadingMore: boolean;
+  onViewMoreSongs: () => void;
   contentPaddingBottom: number;
   colors: any;
 }
 
-const SuggestedTab = React.memo(function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSongPress, onArtistPress, onOptionsPress, onSeeAll, onEndReached, hasMore, loadingMore, contentPaddingBottom, colors }: SuggestedTabProps) {
+const SuggestedTab = React.memo(function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSongPress, onArtistPress, onOptionsPress, onSeeAll, onViewMoreSongs, contentPaddingBottom, colors }: SuggestedTabProps) {
   const handleTrendingSongPress = useCallback((song: Song) => {
     onSongPress(song, trendingSongs);
   }, [onSongPress, trendingSongs]);
@@ -518,10 +492,6 @@ const SuggestedTab = React.memo(function SuggestedTab({ recentlyPlayed, artists,
     offset: COMPACT_SONG_ROW_HEIGHT * index,
     index,
   }), []);
-
-  const handleEndReached = useCallback(() => {
-    if (hasMore) onEndReached();
-  }, [hasMore, onEndReached]);
 
   const header = (
     <>
@@ -621,13 +591,14 @@ const SuggestedTab = React.memo(function SuggestedTab({ recentlyPlayed, artists,
       updateCellsBatchingPeriod={50}
       windowSize={5}
       removeClippedSubviews
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.35}
-      ListFooterComponent={loadingMore ? (
-        <View style={styles.listFooterLoader}>
-          <ActivityIndicator size="small" color={Colors.primary} />
+      ListFooterComponent={
+        <View style={styles.viewMoreWrap}>
+          <TouchableOpacity style={styles.viewMoreButton} onPress={onViewMoreSongs} activeOpacity={0.85}>
+            <Text style={styles.viewMoreButtonText}>View More</Text>
+            <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
-      ) : null}
+      }
       contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
     />
   );
@@ -693,4 +664,24 @@ const styles = StyleSheet.create({
   radioDot: { width: 10, height: 10, borderRadius: 5 },
   sortOptionText: { fontSize: 15 },
   listFooterLoader: { paddingVertical: 16 },
+  viewMoreWrap: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20, alignItems: 'center' },
+  viewMoreButton: {
+    backgroundColor: '#fff',
+    minHeight: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  viewMoreButtonText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontFamily: 'Flamante-Roma-Medium',
+    fontWeight: 'normal',
+  },
 });
