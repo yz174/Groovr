@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -19,23 +19,30 @@ interface SongRowProps {
 
 const SongRow = memo(({ song, onPress, onOptionsPress, showIndex, compact, showMediaButtons = true }: SongRowProps) => {
   const { colors } = useTheme();
-  const currentSong = usePlayerStore(s => s.currentSong());
-  const isPlaying = usePlayerStore(s => s.isPlaying);
-  const isActive = currentSong?.id === song.id;
+  const isActive = usePlayerStore((state) => state.currentSong()?.id === song.id);
+  const isActiveAndPlaying = usePlayerStore((state) => state.isPlaying && state.currentSong()?.id === song.id);
 
   const imageUrl = getBestImage(song.image, '150x150');
   const artistName = getSongArtistNames(song);
   const duration = formatDuration(song.duration);
 
+  const handlePress = useCallback(() => {
+    onPress?.(song);
+  }, [onPress, song]);
+
+  const handleOptionsPress = useCallback(() => {
+    onOptionsPress?.(song);
+  }, [onOptionsPress, song]);
+
   return (
     <TouchableOpacity
-      onPress={() => onPress?.(song)}
+      onPress={handlePress}
       style={[styles.container, compact && styles.compact]}
       activeOpacity={0.7}
     >
       {showIndex !== undefined && (
         <Text style={[styles.index, { color: isActive ? Colors.primary : colors.textSecondary }]}>
-          {isActive && isPlaying ? '▶' : showIndex + 1}
+          {isActiveAndPlaying ? '▶' : showIndex + 1}
         </Text>
       )}
 
@@ -61,20 +68,20 @@ const SongRow = memo(({ song, onPress, onOptionsPress, showIndex, compact, showM
       {showMediaButtons && (
         <View style={styles.actions}>
           <TouchableOpacity
-            onPress={() => onPress?.(song)}
+            onPress={handlePress}
             style={[styles.playBtn, { backgroundColor: Colors.primary }]}
             hitSlop={4}
           >
             <Ionicons
-              name={isActive && isPlaying ? 'pause' : 'play'}
+              name={isActiveAndPlaying ? 'pause' : 'play'}
               size={14}
               color="#fff"
-              style={isActive && isPlaying ? undefined : { marginLeft: 1 }}
+              style={isActiveAndPlaying ? undefined : { marginLeft: 1 }}
             />
           </TouchableOpacity>
 
           {onOptionsPress && (
-            <TouchableOpacity onPress={() => onOptionsPress(song)} hitSlop={8} style={styles.moreBtn}>
+            <TouchableOpacity onPress={handleOptionsPress} hitSlop={8} style={styles.moreBtn}>
               <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
