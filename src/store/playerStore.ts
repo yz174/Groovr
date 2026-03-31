@@ -4,6 +4,7 @@ import TrackPlayer, {
   AppKilledPlaybackBehavior,
   Event,
   State,
+  RepeatMode as NativeRepeatMode,
 } from 'react-native-track-player';
 import { Song, getBestDownloadUrl, getSongArtistNames, getBestImage } from '../api/saavn';
 import { getJSON, setJSON, STORAGE_KEYS } from '../utils/storage';
@@ -50,8 +51,8 @@ interface PlayerActions {
   toggleRepeat: () => void;
 
   // Queue management
-  addToQueue: (song: Song) => void;
-  playNext: (song: Song) => void;
+  addToQueue: (song: Song) => Promise<void>;
+  playNext: (song: Song) => Promise<void>;
   removeFromQueue: (index: number) => void;
 
   // Downloads
@@ -164,6 +165,26 @@ function songToTrack(song: Song) {
   };
 }
 
+function toNativeRepeatMode(mode: RepeatMode): NativeRepeatMode {
+  switch (mode) {
+    case 'one':
+      return NativeRepeatMode.Track;
+    case 'all':
+      return NativeRepeatMode.Queue;
+    default:
+      return NativeRepeatMode.Off;
+  }
+}
+
+async function syncNativeRepeatMode(mode: RepeatMode) {
+  try {
+    await ensurePlayerReady();
+    await TrackPlayer.setRepeatMode(toNativeRepeatMode(mode));
+  } catch (err) {
+    console.error('Failed to sync native repeat mode:', err);
+  }
+}
+
 export const usePlayerStore = create<PlayerStore>((set, get) => {
   // Subscribe to RNTP events at store creation time (closure captures set/get)
   TrackPlayer.addEventListener(Event.PlaybackState, (e) => {
@@ -186,18 +207,6 @@ export const usePlayerStore = create<PlayerStore>((set, get) => {
     if (typeof e.index === 'number') {
       set({ currentIndex: e.index, position: 0 });
       persistLastPlayedSnapshot(get(), true);
-    }
-  });
-
-  // Fires when the current track finishes and there's nothing left in the RNTP queue.
-  // Since we only ever load one track at a time, this fires on every natural track end.
-  TrackPlayer.addEventListener(Event.PlaybackQueueEnded, async () => {
-    const { repeatMode } = get();
-    if (repeatMode === 'one') {
-      await TrackPlayer.seekTo(0);
-      await TrackPlayer.play();
-    } else {
-      await get().skipNext();
     }
   });
 
@@ -235,6 +244,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => {
         shuffleMode: Boolean(snapshot.shuffleMode),
         shuffledIndices: Array.isArray(snapshot.shuffledIndices) ? snapshot.shuffledIndices : [],
       });
+      void syncNativeRepeatMode(snapshot.repeatMode ?? 'none');
     },
 
     currentSong: () => {
@@ -268,10 +278,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => {
       set({ isLoading: true, position: Math.max(0, startPositionMs), duration: 0 });
       try {
         await ensurePlayerReady();
-        const { queue, currentIndex } = get();
+        const { queue, currentIndex, repeatMode } = get();
         const tracks = (queue.length ? queue : [song]).map(songToTrack);
         await TrackPlayer.reset();
         await TrackPlayer.add(tracks);
+        await TrackPlayer.setRepeatMode(toNativeRepeatMode(repeatMode));
         if (currentIndex > 0) {
           await TrackPlayer.skip(currentIndex);
         }
@@ -383,20 +394,48 @@ export const usePlayerStore = create<PlayerStore>((set, get) => {
       const next: RepeatMode =
         repeatMode === 'none' ? 'all' : repeatMode === 'all' ? 'one' : 'none';
       set({ repeatMode: next });
+      void syncNativeRepeatMode(next);
       persistLastPlayedSnapshot(get(), true);
     },
 
-    addToQueue: (song) => {
+    addToQueue: async (song) => {
+      const { queue } = get();
+      if (!queue.length) {
+        // Nothing playing yet — start playing this song
+        set({ queue: [song], currentIndex: 0, shuffledIndices: [0] });
+        await get()._loadAndPlay(song);
+        return;
+      }
       set(state => ({ queue: [...state.queue, song] }));
+      try {
+        // Append to the end of the RNTP queue (FIFO)
+        await TrackPlayer.add(songToTrack(song));
+      } catch (err) {
+        console.error('addToQueue: failed to sync RNTP queue', err);
+      }
       persistLastPlayedSnapshot(get(), true);
     },
 
-    playNext: (song) => {
+    playNext: async (song) => {
+      const { queue, currentIndex } = get();
+      if (!queue.length) {
+        // Nothing playing yet — start playing this song immediately
+        set({ queue: [song], currentIndex: 0, shuffledIndices: [0] });
+        await get()._loadAndPlay(song);
+        return;
+      }
+      const insertAt = currentIndex + 1;
       set(state => {
         const newQueue = [...state.queue];
-        newQueue.splice(state.currentIndex + 1, 0, song);
+        newQueue.splice(insertAt, 0, song);
         return { queue: newQueue };
       });
+      try {
+        // Insert into the RNTP queue right after the current track
+        await TrackPlayer.add(songToTrack(song), insertAt);
+      } catch (err) {
+        console.error('playNext: failed to sync RNTP queue', err);
+      }
       persistLastPlayedSnapshot(get(), true);
     },
 

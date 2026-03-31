@@ -28,4 +28,5 @@ export const STORAGE_KEYS = {
   AUDIO_QUALITY: 'audio_quality',
   PLAYLISTS: 'playlists',
   LAST_PLAYED: 'last_played',
+  RECENT_SONGS: 'recent_songs',
 } as const;

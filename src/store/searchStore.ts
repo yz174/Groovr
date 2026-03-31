@@ -13,6 +13,7 @@ interface SearchState {
   isLoading: boolean;
   activeTab: 'Songs' | 'Albums' | 'Artists' | 'Playlists';
   recentSearches: string[];
+  recentSongs: Song[];
 }
 
 interface SearchActions {
@@ -23,6 +24,7 @@ interface SearchActions {
   addRecentSearch: (term: string) => void;
   removeRecentSearch: (term: string) => void;
   clearRecentSearches: () => void;
+  addRecentSong: (song: Song) => void;
   hydrate: () => void;
 }
 
@@ -32,6 +34,7 @@ export const useSearchStore = create<SearchState & SearchActions>((set, get) => 
   isLoading: false,
   activeTab: 'Songs',
   recentSearches: [],
+  recentSongs: [],
 
   setQuery: (q) => set({ query: q }),
   setResults: (results) => set(state => ({ results: { ...state.results, ...results } })),
@@ -61,8 +64,18 @@ export const useSearchStore = create<SearchState & SearchActions>((set, get) => 
     set({ recentSearches: [] });
   },
 
+  addRecentSong: (song) => {
+    set(state => {
+      const filtered = state.recentSongs.filter(s => s.id !== song.id);
+      const newSongs = [song, ...filtered].slice(0, 20);
+      setJSON(STORAGE_KEYS.RECENT_SONGS, newSongs);
+      return { recentSongs: newSongs };
+    });
+  },
+
   hydrate: () => {
     const recentSearches = getJSON<string[]>(STORAGE_KEYS.RECENT_SEARCHES, []);
-    set({ recentSearches });
+    const recentSongs = getJSON<Song[]>(STORAGE_KEYS.RECENT_SONGS, []);
+    set({ recentSearches, recentSongs });
   },
 }));

@@ -119,16 +119,16 @@ export async function searchSongs(query: string, limit = 20, page = 1) {
   return (data?.data?.results ?? []) as Song[];
 }
 
-export async function searchAlbums(query: string, limit = 20) {
+export async function searchAlbums(query: string, limit = 20, page = 1) {
   const data = await fetchAPI<any>(
-    `/api/search/albums?query=${encodeURIComponent(query)}&limit=${limit}`
+    `/api/search/albums?query=${encodeURIComponent(query)}&limit=${limit}&page=${page}`
   );
   return (data?.data?.results ?? []) as Album[];
 }
 
-export async function searchArtists(query: string, limit = 20) {
+export async function searchArtists(query: string, limit = 20, page = 1) {
   const data = await fetchAPI<any>(
-    `/api/search/artists?query=${encodeURIComponent(query)}&limit=${limit}`
+    `/api/search/artists?query=${encodeURIComponent(query)}&limit=${limit}&page=${page}`
   );
   const results = (data?.data?.results ?? []) as Artist[];
   return results.map((artist) => ({
