@@ -190,11 +190,6 @@ export default function SongOptionsSheet({
       loading: isDownloading,
       color: downloaded ? Colors.primary : undefined,
     },
-    {
-      icon: 'share-outline',
-      label: 'Share',
-      onPress: () => handleClose(),
-    },
   ];
 
   return (
