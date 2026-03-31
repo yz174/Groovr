@@ -16,7 +16,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.groovr.app",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"],
+        "UIBackgroundModes": [
+          "audio"
+        ],
         "NSMicrophoneUsageDescription": "Groovr needs microphone access for voice search."
       }
     },
@@ -69,6 +71,14 @@
       "fallbackToCacheTimeout": 0
     },
     "scheme": "groovr",
-    "assetBundlePatterns": ["**/*"]
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "abcdbb81-168a-40d0-92f4-8a4a03467ba0"
+      }
+    },
+    "owner": "ujjwalatri"
   }
 }
