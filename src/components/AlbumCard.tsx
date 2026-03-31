@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Album, getAlbumArtistNames, getBestImage } from '../api/saavn';
 import { useTheme } from '../hooks/useTheme';
+import MixedText from './MixedText';
 
 interface AlbumCardProps {
   album: Album;
@@ -30,7 +31,7 @@ const AlbumCard = memo(({ album, onPress, onOptionsPress, size = 160, horizontal
           defaultSource={require('../../assets/icon.png')}
         />
         <View style={styles.horizontalInfo}>
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{album.name}</Text>
+          <MixedText style={[styles.name, { color: colors.text }]} numberOfLines={1}>{album.name}</MixedText>
           <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
             {artistName}{album.year ? `  |  ${album.year}` : ''}
           </Text>
@@ -61,7 +62,7 @@ const AlbumCard = memo(({ album, onPress, onOptionsPress, size = 160, horizontal
         defaultSource={require('../../assets/icon.png')}
       />
       <View style={styles.cardInfo}>
-        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{album.name}</Text>
+        <MixedText style={[styles.name, { color: colors.text }]} numberOfLines={2}>{album.name}</MixedText>
         <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
           {artistName}
           {album.year ? `  ·  ${album.year}` : ''}

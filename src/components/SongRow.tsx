@@ -6,6 +6,7 @@ import { Song, getBestImage, getSongArtistNames, formatDuration } from '../api/s
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
 import { usePlayerStore } from '../store/playerStore';
+import MixedText from './MixedText';
 
 interface SongRowProps {
   song: Song;
@@ -13,9 +14,10 @@ interface SongRowProps {
   onOptionsPress?: (song: Song) => void;
   showIndex?: number;
   compact?: boolean;
+  showMediaButtons?: boolean;
 }
 
-const SongRow = memo(({ song, onPress, onOptionsPress, showIndex, compact }: SongRowProps) => {
+const SongRow = memo(({ song, onPress, onOptionsPress, showIndex, compact, showMediaButtons = true }: SongRowProps) => {
   const { colors } = useTheme();
   const currentSong = usePlayerStore(s => s.currentSong());
   const isPlaying = usePlayerStore(s => s.isPlaying);
@@ -44,38 +46,40 @@ const SongRow = memo(({ song, onPress, onOptionsPress, showIndex, compact }: Son
       />
 
       <View style={styles.info}>
-        <Text
+        <MixedText
           style={[styles.title, { color: isActive ? Colors.primary : colors.text }]}
           numberOfLines={1}
         >
           {song.name}
-        </Text>
+        </MixedText>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
           {artistName}
           {duration ? `  |  ${duration}` : ''}
         </Text>
       </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          onPress={() => onPress?.(song)}
-          style={[styles.playBtn, { backgroundColor: Colors.primary }]}
-          hitSlop={4}
-        >
-          <Ionicons
-            name={isActive && isPlaying ? 'pause' : 'play'}
-            size={14}
-            color="#fff"
-            style={isActive && isPlaying ? undefined : { marginLeft: 1 }}
-          />
-        </TouchableOpacity>
-
-        {onOptionsPress && (
-          <TouchableOpacity onPress={() => onOptionsPress(song)} hitSlop={8} style={styles.moreBtn}>
-            <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+      {showMediaButtons && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            onPress={() => onPress?.(song)}
+            style={[styles.playBtn, { backgroundColor: Colors.primary }]}
+            hitSlop={4}
+          >
+            <Ionicons
+              name={isActive && isPlaying ? 'pause' : 'play'}
+              size={14}
+              color="#fff"
+              style={isActive && isPlaying ? undefined : { marginLeft: 1 }}
+            />
           </TouchableOpacity>
-        )}
-      </View>
+
+          {onOptionsPress && (
+            <TouchableOpacity onPress={() => onOptionsPress(song)} hitSlop={8} style={styles.moreBtn}>
+              <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 });
@@ -97,8 +101,6 @@ const styles = StyleSheet.create({
   index: {
     width: 28,
     fontSize: 14,
-    fontFamily: 'Flamante-Roma-Medium',
-    fontWeight: 'normal',
     textAlign: 'center',
     marginRight: 4,
   },

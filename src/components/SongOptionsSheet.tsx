@@ -14,6 +14,7 @@ import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Song, getBestImage, getSongArtistNames, formatDuration } from '../api/saavn';
+import MixedText from './MixedText';
 import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
 import { usePlayerStore } from '../store/playerStore';
@@ -224,9 +225,9 @@ export default function SongOptionsSheet({
             defaultSource={require('../../assets/icon.png')}
           />
           <View style={styles.headerInfo}>
-            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+            <MixedText style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {song.name}
-            </Text>
+            </MixedText>
             <Text style={[styles.headerSub, { color: colors.textSecondary }]} numberOfLines={1}>
               {artistName}  |  {duration}
             </Text>
@@ -259,7 +260,7 @@ export default function SongOptionsSheet({
                   style={styles.menuIcon}
                 />
               )}
-              <Text style={[styles.menuLabel, { color: item.color ?? colors.text }]}> 
+              <Text style={[/\d/.test(item.label) ? styles.menuLabelNumeric : styles.menuLabel, { color: item.color ?? colors.text }]}>
                 {item.label}
               </Text>
             </TouchableOpacity>
@@ -378,6 +379,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Flamante-Round-Book-FFP',
     fontWeight: 'normal',
   },
+  menuLabelNumeric: {
+    fontSize: 15,
+  },
   playlistOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',
@@ -431,8 +435,6 @@ const styles = StyleSheet.create({
   playlistConfirmText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontFamily: 'Flamante-Roma-Medium',
-    fontWeight: 'normal',
   },
   playlistCancel: {
     margin: 12,

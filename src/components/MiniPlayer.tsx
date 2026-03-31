@@ -18,8 +18,12 @@ import { useTheme } from '../hooks/useTheme';
 import { Colors } from '../theme/colors';
 import { getBestImage, getSongArtistNames } from '../api/saavn';
 import { RootStackParamList } from '../navigation/types';
+import MixedText from './MixedText';
 
-type NavProp = NativeStackNavigationProp<RootStackParamList>;
+type NavProp = NativeStackNavigationProp<RootStackParamList>
+// Keep in sync with tabBarStyle.height in AppNavigator
+export const TAB_BAR_HEIGHT = 78;
+export const MINI_PLAYER_HEIGHT = 64;
 
 export default function MiniPlayer() {
   const navigation = useNavigation<NavProp>();
@@ -42,7 +46,7 @@ export default function MiniPlayer() {
         {
           backgroundColor: colors.surfaceElevated,
           borderTopColor: colors.separator,
-          bottom: insets.bottom + 60, // Above tab bar
+          bottom: insets.bottom + TAB_BAR_HEIGHT + 8,
           shadowColor: isDark ? '#000' : '#888',
         },
       ]}
@@ -56,9 +60,9 @@ export default function MiniPlayer() {
 
       {/* Song Info */}
       <View style={styles.info}>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+        <MixedText style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {currentSong.name}
-        </Text>
+        </MixedText>
         <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
           {artistName}
         </Text>
