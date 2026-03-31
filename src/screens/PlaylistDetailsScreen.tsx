@@ -11,6 +11,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { Song, getBestImage } from '../api/saavn';
 import SongRow from '../components/SongRow';
 import SongOptionsSheet from '../components/SongOptionsSheet';
+import MixedText from '../components/MixedText';
 import { PlaylistsStackParamList } from '../navigation/types';
 
 type RoutePropType = RouteProp<PlaylistsStackParamList, 'PlaylistDetails'>;
@@ -51,7 +52,7 @@ export default function PlaylistDetailsScreen() {
                 <Ionicons name="musical-notes" size={48} color={Colors.primary} />
               </View>
             )}
-            <Text style={[styles.title, { color: colors.text }]}>{playlist.name}</Text>
+            <MixedText style={[styles.title, { color: colors.text }]}>{playlist.name}</MixedText>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
               {playlist.songs.length} song{playlist.songs.length !== 1 ? 's' : ''}
             </Text>

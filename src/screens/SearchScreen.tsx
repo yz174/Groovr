@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  Image,
   StyleSheet,
   ActivityIndicator,
   Keyboard,
@@ -37,6 +38,7 @@ export default function SearchScreen() {
     isLoading, setLoading,
     activeTab, setActiveTab,
     recentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches,
+    recentSongs, addRecentSong,
   } = useSearchStore();
   const { playQueue } = usePlayerStore();
 
@@ -86,6 +88,8 @@ export default function SearchScreen() {
   };
 
   const handleClear = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setLoading(false);
     setQuery('');
     setResults({ songs: [], albums: [], artists: [] });
     inputRef.current?.focus();
@@ -110,6 +114,7 @@ export default function SearchScreen() {
               <SongRow
                 song={item}
                 onPress={(s) => {
+                  addRecentSong(s);
                   playQueue(results.songs, results.songs.findIndex(x => x.id === s.id));
                 }}
                 onOptionsPress={(s) => { setSelectedSong(s); setOptionsVisible(true); }}
@@ -180,7 +185,7 @@ export default function SearchScreen() {
             autoCorrect={false}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={handleClear} hitSlop={8}>
+            <TouchableOpacity onPressIn={handleClear} hitSlop={8}>
               <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
@@ -225,10 +230,7 @@ export default function SearchScreen() {
       {/* Not Found */}
       {showNotFound && !isLoading && (
         <View style={styles.center}>
-          <Ionicons name="musical-notes-outline" size={64} color={colors.textTertiary} />
-          <Text style={[styles.notFoundText, { color: colors.textSecondary }]}>
-            No results for "{query}"
-          </Text>
+          <Image source={require('../../assets/NoSearch.png')} style={styles.noSearchImage} resizeMode="contain" />
         </View>
       )}
 
@@ -250,14 +252,38 @@ export default function SearchScreen() {
         </View>
       )}
 
-      {/* Empty State */}
+      {/* Empty State / Recent Songs */}
       {!showRecents && !isLoading && !showResults && !showNotFound && (
-        <View style={styles.center}>
-          <Ionicons name="search-outline" size={64} color={colors.textTertiary} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Search for songs, artists & albums
-          </Text>
-        </View>
+        recentSongs.length > 0 ? (
+          <View style={{ flex: 1 }}>
+            <View style={styles.recentsHeader}>
+              <Text style={[styles.recentsTitle, { color: colors.text }]}>Recently Played</Text>
+            </View>
+            <FlatList
+              data={recentSongs}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <SongRow
+                  song={item}
+                  onPress={(s) => {
+                    addRecentSong(s);
+                    playQueue(recentSongs, recentSongs.findIndex(x => x.id === s.id));
+                  }}
+                  showMediaButtons={false}
+                />
+              )}
+              contentContainerStyle={{ paddingBottom: 140 }}
+              keyboardShouldPersistTaps="handled"
+            />
+          </View>
+        ) : (
+          <View style={styles.center}>
+            <Ionicons name="search-outline" size={64} color={colors.textTertiary} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              Search for songs, artists & albums
+            </Text>
+          </View>
+        )
       )}
 
       <SongOptionsSheet
@@ -295,6 +321,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, fontFamily: 'Flamante-Roma-Medium',
     fontWeight: 'normal' },
   tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, borderRadius: 1 },
+  noSearchImage: { width: 500, height: 900 },
   notFoundText: { fontSize: 16, marginTop: 12, textAlign: 'center' },
   emptyText: { fontSize: 15, marginTop: 12, textAlign: 'center' },
 });

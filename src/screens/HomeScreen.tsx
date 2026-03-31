@@ -11,7 +11,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,6 +29,7 @@ import AlbumCard from '../components/AlbumCard';
 import ArtistCard from '../components/ArtistCard';
 import SongOptionsSheet from '../components/SongOptionsSheet';
 import { HomeStackParamList } from '../navigation/types';
+import { TAB_BAR_HEIGHT, MINI_PLAYER_HEIGHT } from '../components/MiniPlayer';
 
 type NavProp = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -48,6 +49,10 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavProp>();
   const { playQueue } = usePlayerStore();
+  const insets = useSafeAreaInsets();
+  const currentSong = usePlayerStore(s => s.currentSong());
+  // Dynamically accounts for tab bar, mini player (when visible), and safe area bottom inset
+  const contentPaddingBottom = insets.bottom + TAB_BAR_HEIGHT + (currentSong ? MINI_PLAYER_HEIGHT + 16 : 16);
 
   const [activeTab, setActiveTab] = useState<HomeTab>('Suggested');
   const [loading, setLoading] = useState(false);
@@ -120,7 +125,7 @@ export default function HomeScreen() {
   }, [navigation]);
 
   const openSearch = useCallback(() => {
-    (navigation as any).navigate('SearchFlow', { screen: 'Search' });
+    (navigation as any).navigate('Main', { screen: 'SearchTab', params: { screen: 'Search' } });
   }, [navigation]);
 
   const sortedSongs = [...songs].sort((a, b) => {
@@ -146,6 +151,11 @@ export default function HomeScreen() {
           onSongPress={handleSongPress}
           onArtistPress={handleArtistPress}
           onOptionsPress={(song) => { setSelectedSong(song); setOptionsVisible(true); }}
+          onSeeAll={(section) => {
+            if (section === 'artists') setActiveTab('Artists');
+            else setActiveTab('Songs');
+          }}
+          contentPaddingBottom={contentPaddingBottom}
           colors={colors}
         />;
 
@@ -154,7 +164,7 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }}>
             <View style={[styles.listHeader, { borderBottomColor: colors.separator }]}>
               <Text style={[styles.listCount, { color: colors.text }]}>
-                {sortedSongs.length} songs
+                {sortedSongs.length}<Text style={styles.listCountWord}> songs</Text>
               </Text>
               <TouchableOpacity
                 style={styles.sortBtn}
@@ -191,7 +201,7 @@ export default function HomeScreen() {
                   onOptionsPress={(s) => { setSelectedSong(s); setOptionsVisible(true); }}
                 />
               )}
-              contentContainerStyle={{ paddingBottom: 140 }}
+              contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
             />
           </View>
         );
@@ -208,7 +218,7 @@ export default function HomeScreen() {
                 <ArtistCard artist={item} onPress={handleArtistPress} size={90} />
               </View>
             )}
-            contentContainerStyle={{ padding: 8, paddingBottom: 140 }}
+            contentContainerStyle={{ padding: 8, paddingBottom: contentPaddingBottom }}
           />
         );
 
@@ -224,7 +234,7 @@ export default function HomeScreen() {
                 <AlbumCard album={item} onPress={handleAlbumPress} size={(SCREEN_WIDTH - 48) / 2} />
               </View>
             )}
-            contentContainerStyle={{ padding: 8, paddingBottom: 140 }}
+            contentContainerStyle={{ padding: 8, paddingBottom: contentPaddingBottom }}
           />
         );
     }
@@ -296,18 +306,20 @@ interface SuggestedTabProps {
   onSongPress: (song: Song, queue?: Song[]) => void;
   onArtistPress: (artist: Artist) => void;
   onOptionsPress: (song: Song) => void;
+  onSeeAll: (section: 'recentlyPlayed' | 'artists' | 'trending' | 'popular') => void;
+  contentPaddingBottom: number;
   colors: any;
 }
 
-function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSongPress, onArtistPress, onOptionsPress, colors }: SuggestedTabProps) {
+function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSongPress, onArtistPress, onOptionsPress, onSeeAll, contentPaddingBottom, colors }: SuggestedTabProps) {
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: contentPaddingBottom }}>
       {/* Recently Played */}
       {recentlyPlayed.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Recently Played</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onSeeAll('recentlyPlayed')}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 16 }}>
             {recentlyPlayed.map(song => (
@@ -336,7 +348,7 @@ function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSo
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Artists</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onSeeAll('artists')}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 16 }}>
             {artists.slice(0, 8).map(artist => (
@@ -351,7 +363,7 @@ function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSo
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Trending</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onSeeAll('trending')}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 16 }}>
             {mostPlayed.map(song => (
@@ -380,7 +392,7 @@ function SuggestedTab({ recentlyPlayed, artists, mostPlayed, trendingSongs, onSo
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Songs</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onSeeAll('popular')}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
           </View>
           {trendingSongs.slice(0, 6).map(song => (
             <SongRow
@@ -434,8 +446,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  listCount: { fontSize: 17, fontFamily: 'Flamante-Roma-Medium',
-    fontWeight: 'normal' },
+  listCount: { fontSize: 17 },
+  listCountWord: { fontFamily: 'Flamante-Roma-Medium', fontWeight: 'normal' },
   sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   sortLabel: { fontSize: 14, fontFamily: 'Flamante-Roma-Medium',
     fontWeight: 'normal' },

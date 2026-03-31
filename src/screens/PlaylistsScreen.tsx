@@ -13,6 +13,7 @@ import { Colors } from '../theme/colors';
 import { useLibraryStore, Playlist } from '../store/libraryStore';
 import { getBestImage } from '../api/saavn';
 import { PlaylistsStackParamList } from '../navigation/types';
+import MixedText from '../components/MixedText';
 
 type NavProp = NativeStackNavigationProp<PlaylistsStackParamList>;
 
@@ -82,7 +83,7 @@ export default function PlaylistsScreen() {
                 </View>
               )}
               <View style={styles.playlistInfo}>
-                <Text style={[styles.playlistName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+                <MixedText style={[styles.playlistName, { color: colors.text }]} numberOfLines={1}>{item.name}</MixedText>
                 <Text style={[styles.playlistMeta, { color: colors.textSecondary }]}>
                   {item.songs.length} song{item.songs.length !== 1 ? 's' : ''}
                 </Text>

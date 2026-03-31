@@ -19,6 +19,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
 import { getBestImage, getSongArtistNames, formatDuration } from '../api/saavn';
 import SongOptionsSheet from '../components/SongOptionsSheet';
+import MixedText from '../components/MixedText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ARTWORK_SIZE = SCREEN_WIDTH - 64;
@@ -49,7 +50,7 @@ export default function NowPlayingScreen() {
 
   const progressPercent = duration > 0 ? position / duration : 0;
 
-  const repeatIcon = repeatMode === 'one' ? 'repeat-outline' : 'repeat';
+  const repeatIcon = 'repeat';
   const repeatColor = repeatMode !== 'none' ? Colors.primary : colors.textSecondary;
 
   return (
@@ -82,9 +83,9 @@ export default function NowPlayingScreen() {
         {/* Song Info + Heart */}
         <View style={styles.infoRow}>
           <View style={styles.infoText}>
-            <Text style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>
+            <MixedText style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>
               {currentSong.name}
-            </Text>
+            </MixedText>
             <Text style={[styles.artistName, { color: colors.textSecondary }]} numberOfLines={1}>
               {artistName}
             </Text>
@@ -267,6 +268,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  repeatOneText: { fontSize: 8, color: '#fff', fontFamily: 'Flamante-Roma-Medium',
-    fontWeight: 'normal' },
+  repeatOneText: { fontSize: 8, color: '#fff', fontWeight: 'bold' },
 });

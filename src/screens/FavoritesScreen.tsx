@@ -46,7 +46,7 @@ export default function FavoritesScreen() {
         <>
           <View style={[styles.listHeader, { borderBottomColor: colors.separator }]}>
             <Text style={[styles.listCount, { color: colors.text }]}>
-              {favorites.length} song{favorites.length !== 1 ? 's' : ''}
+              {favorites.length}<Text style={styles.listCountWord}> song{favorites.length !== 1 ? 's' : ''}</Text>
             </Text>
             <TouchableOpacity
               style={[styles.playAllBtn, { backgroundColor: Colors.primary }]}
@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     fontWeight: 'normal', marginTop: 16 },
   emptySubtitle: { fontSize: 15, marginTop: 8, textAlign: 'center' },
   listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  listCount: { fontSize: 17, fontFamily: 'Flamante-Roma-Medium',
-    fontWeight: 'normal' },
+  listCount: { fontSize: 17 },
+  listCountWord: { fontFamily: 'Flamante-Roma-Medium', fontWeight: 'normal' },
   playAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   playAllText: { color: '#fff', fontFamily: 'Flamante-Roma-Medium',
     fontWeight: 'normal', fontSize: 13 },

@@ -14,6 +14,7 @@ import { getAlbum, Song, getBestImage, getAlbumArtistNames } from '../api/saavn'
 import { usePlayerStore } from '../store/playerStore';
 import SongRow from '../components/SongRow';
 import SongOptionsSheet from '../components/SongOptionsSheet';
+import MixedText from '../components/MixedText';
 import { HomeStackParamList } from '../navigation/types';
 
 type RoutePropType = RouteProp<HomeStackParamList, 'AlbumDetails'>;
@@ -71,7 +72,7 @@ export default function AlbumDetailsScreen() {
   })();
 
   const openSearch = () => {
-    (navigation as any).navigate('SearchFlow', { screen: 'Search' });
+    (navigation as any).navigate('Main', { screen: 'SearchTab', params: { screen: 'Search' } });
   };
 
   return (
@@ -99,7 +100,7 @@ export default function AlbumDetailsScreen() {
             style={styles.albumArt}
             defaultSource={require('../../assets/icon.png')}
           />
-          <Text style={[styles.albumTitle, { color: colors.text }]}>{album?.name ?? albumName}</Text>
+          <MixedText style={[styles.albumTitle, { color: colors.text }]}>{album?.name ?? albumName}</MixedText>
           <Text style={[styles.albumMeta, { color: colors.textSecondary }]}>
             {artistName}
           </Text>
